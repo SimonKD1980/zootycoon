@@ -16,7 +16,7 @@
     "conservationStatus": "Domesticated",
     "info": "Small, friendly goats perfect for petting zoos. They love to climb and play.",
     "compatibleWith": ["pygmy_goat", "alpaca", "babydoll_southdowns_sheep"],
-    "image": "https://simonkd1980.github.io/zootycoon/images/pygmy_goat.png",
+    "image": "images/pygmy_goat.png",
     "variations": [{"name": "Normal", "chance": 100, "incomeMultiplier": 1}],
     "preferredShelter": ["barn_shelter"],
     "preferredDecorations": ["rocks", "trees"],
