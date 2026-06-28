@@ -1671,15 +1671,19 @@ function processDayIncome() {
     
     processVisitorBehavior(visitors);
 }
-
+  
 function processUpkeep() {
     let totalCost = 0;
     for (const id in state.exhibits) {
         const exhibit = state.exhibits[id];
-        for (const animal of exhibit.animals) {
-            totalCost += ANIMAL_UPKEEP_BASE + (animal.dailyIncome * ANIMAL_UPKEEP_RATE);
-        }
+        
+        // $5 base exhibit maintenance
         totalCost += 5;
+        
+        // Food cost per animal
+        for (const animal of exhibit.animals) {
+            totalCost += animal.foodCost || 2; // fallback for old saves
+        }
     }
     state.money -= totalCost;
     addTicker(`🧾 Upkeep paid: -$${totalCost.toFixed(0)}`);
@@ -1716,6 +1720,7 @@ function tryBreeding(exhibit) {
                 ageDays: 0,
                 dailyIncome: animalData.dailyIncome,
                 variation: null,
+                foodCost: animalData.foodCost,
                 compatibleWith: animalData.compatibleWith,
                 minInExhibit: animalData.minInExhibit,
                 maxInExhibit: animalData.maxInExhibit,
@@ -1996,9 +2001,13 @@ function renderShopGrid() {
                 <p class="card-desc">${animal.info}</p>
                 
                 <div class="card-price">
-                    $${animal.cost.toLocaleString()}
-                    <small>📈 Earns $${animal.dailyIncome}/day</small>
-                </div>
+                $${animal.cost.toLocaleString()}
+    <small>📈 Earns $${animal.dailyIncome}/day</small>
+</div>
+<div style="display:flex; gap:6px; flex-wrap:wrap; margin: 6px 0;">
+    <span class="stat-badge warn">🍖 Food: $${animal.foodCost}/day</span>
+    <span class="stat-badge green">💰 Net: $${animal.dailyIncome - animal.foodCost}/day</span>
+</div>
                 
                 <button class="primary-btn">Add to Zoo</button>
             </div>
@@ -2050,6 +2059,19 @@ function renderExhibits() {
                 <div class="happiness-bar">
                     <div class="happiness-fill" style="width:${happiness}%"></div>
                 </div>
+const dailyFoodCost = group.animals.reduce((sum, a) => sum + (a.foodCost || 2), 0);
+const dailyExhibitCost = 5 + dailyFoodCost;
+
+// Add to exhibit-body:
+<div class="exhibit-stat">
+    <span>🍖 Daily Food</span>
+    <strong style="color: var(--warn);">$${dailyFoodCost}</strong>
+</div>
+<div class="exhibit-stat">
+    <span>🧾 Total Upkeep</span>
+    <strong style="color: var(--danger);">$${dailyExhibitCost}/day</strong>
+</div>
+                
                 <div class="exhibit-stat">
                     <span>🏗 Upgrades</span>
                     <strong>${upgradeCount}</strong>
@@ -2568,6 +2590,7 @@ document.getElementById("confirmBuyBtn").onclick = () => {
         gender,
         dailyIncome: animal.dailyIncome,
         variation: pickVariation(animal),
+        foodCost: animal.foodCost, 
         compatibleWith: animal.compatibleWith,
         minInExhibit: animal.minInExhibit,
         maxInExhibit: animal.maxInExhibit,
