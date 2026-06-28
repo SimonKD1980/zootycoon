@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Help Guide - Zoo Tycoon</title>
+<style>
+:root {
+    --bg: #0f172a;
+    --panel: #111827;
+    --card: #1f2937;
+    --card-hover: #273548;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --accent: #22c55e;
+    --danger: #ef4444;
+    --warn: #f59e0b;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+    --gold: #fbbf24;
+    --radius: 14px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+/* NAVIGATION */
+.nav {
+    background: var(--panel);
+    padding: 15px 20px;
+    border-bottom: 1px solid #243042;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.nav-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-logo {
+    font-size: 1.3rem;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-logo span {
+    background: linear-gradient(135deg, var(--accent), var(--blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.nav-links {
+    display: flex;
+    gap: 20px;
+}
+
+.nav-links a {
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.nav-links a:hover {
+    color: var(--accent);
+}
+
+/* CONTENT */
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.page-header {
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.page-title {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 900;
+    margin-bottom: 15px;
+    background: linear-gradient(135deg, var(--accent), var(--blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* SECTIONS */
+.help-section {
+    background: var(--card);
+    border: 1px solid #243042;
+    border-radius: var(--radius);
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+.help-section h2 {
+    color: var(--accent);
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.help-section h3 {
+    color: var(--blue);
+    margin: 20px 0 10px 0;
+    font-size: 1.2rem;
+}
+
+.help-section p, .help-section ul {
+    margin-bottom: 15px;
+    color: var(--muted);
+}
+
+.help-section ul {
+    padding-left: 20px;
+}
+
+.help-section li {
+    margin-bottom: 8px;
+}
+
+/* TIPS BOX */
+.tip-box {
+    background: rgba(34, 197, 94, 0.1);
+    border-left: 4px solid var(--accent);
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.tip-box.warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-left-color: var(--warn);
+}
+
+.tip-box.danger {
+    background: rgba(239, 68, 68, 0.1);
+    border-left-color: var(--danger);
+}
+
+/* CODE BLOCKS */
+code {
+    background: #0b1220;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: var(--accent);
+}
+
+/* FOOTER */
+footer {
+    background: var(--panel);
+    padding: 30px 20px;
+    text-align: center;
+    border-top: 1px solid #243042;
+    margin-top: 60px;
+}
+
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.footer-links a {
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.footer-links a:hover {
+    color: var(--accent);
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .nav-links {
+        display: none;
+    }
+    
+    .help-section {
+        padding: 20px;
+    }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+    <div class="nav-content">
+        <div class="nav-logo">🦁 <span>Zoo Tycoon</span></div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="game.html">Play Game</a>
+            <a href="help.html">Help</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="page-header">
+        <h1 class="page-title">📖 Help Guide</h1>
+        <p style="color: var(--muted);">Everything you need to know to build the perfect zoo!</p>
+    </div>
+
+    <div class="help-section">
+        <h2>🎮 Getting Started</h2>
+        <p>Welcome to Zoo Tycoon! Here's how to get started:</p>
+        
+        <h3>Step 1: Build Your First Exhibit</h3>
+        <p>Click the "🏗 Build Exhibit ($1000)" button at the top. Each exhibit can house multiple animals.</p>
+        
+        <h3>Step 2: Buy Animals</h3>
+        <p>Go to the <strong>Shop</strong> tab and click "Add to Zoo" on any animal. Choose which exhibit to place them in and their gender.</p>
+        
+        <h3>Step 3: Build Amenities</h3>
+        <p>Visit the <strong>Amenities</strong> tab to build food stands, gift shops, benches, and restrooms. These keep visitors happy and generate extra income!</p>
+        
+        <h3>Step 4: Advance Days</h3>
+        <p>Click "⏭ End Day" to progress time. You'll earn money from ticket sales and amenities, but pay for animal upkeep and staff salaries.</p>
+    </div>
+
+    <div class="help-section">
+        <h2>🐾 Animal Happiness</h2>
+        <p>Happy animals attract more visitors and can breed! Here's what affects happiness:</p>
+        
+        <ul>
+            <li><strong>Population:</strong> Each species has a minimum and maximum number. Too few = lonely, too many = overcrowded.</li>
+            <li><strong>Preferred Upgrades:</strong> Animals like certain shelters, decorations, and facilities. Check the animal's info before buying!</li>
+            <li><strong>Staff:</strong> Hire keepers and janitors to boost animal happiness.</li>
+        </ul>
+        
+        <div class="tip-box">
+            <strong>💡 Tip:</strong> Keep animal happiness at 100% to enable breeding!
+        </div>
+    </div>
+
+    <div class="help-section">
+        <h2>👥 Visitor Satisfaction</h2>
+        <p>Happy visitors spend more money! Build amenities to keep them satisfied:</p>
+        
+        <ul>
+            <li><strong>Benches:</strong> Tired visitors need somewhere to sit</li>
+            <li><strong>Restrooms:</strong> Long lines = unhappy visitors</li>
+            <li><strong>Food Stands:</strong> Hungry visitors will leave to find food elsewhere</li>
+            <li><strong>Gift Shops:</strong> Visitors love to buy souvenirs!</li>
+        </ul>
+        
+        <div class="tip-box warning">
+            <strong>⚠️ Warning:</strong> Check the <strong>Visitors</strong> tab to see complaints and fix problems quickly!
+        </div>
+    </div>
+
+    <div class="help-section">
+        <h2>💰 Money Management</h2>
+        
+        <h3>Income Sources:</h3>
+        <ul>
+            <li><strong>Ticket Sales:</strong> Based on number of visitors and ticket price</li>
+            <li><strong>Animal Income:</strong> Some animals generate daily income</li>
+            <li><strong>Amenity Sales:</strong> Food stands and gift shops earn money from visitors</li>
+        </ul>
+        
+        <h3>Expenses:</h3>
+        <ul>
+            <li><strong>Animal Upkeep:</strong> $2 + 15% of animal's daily income</li>
+            <li><strong>Staff Salaries:</strong> Paid daily for each hired staff member</li>
+            <li><strong>Exhibit Maintenance:</strong> $5 per exhibit per day</li>
+            <li><strong>Amenity Maintenance:</strong> Varies by amenity type</li>
+        </ul>
+        
+        <div class="tip-box">
+            <strong>💡 Tip:</strong> Don't hire too many staff early on - their salaries add up quickly!
+        </div>
+    </div>
+
+    <div class="help-section">
+        <h2>🍼 Breeding</h2>
+        <p>Breeding animals creates babies and boosts visitor excitement!</p>
+        
+        <h3>Requirements:</h3>
+        <ul>
+            <li>At least 2 animals of the same species in one exhibit</li>
+            <li>At least 1 male and 1 female</li>
+            <li>100% animal happiness</li>
+            <li>Luck! (Each species has a base breeding chance)</li>
+        </ul>
+        
+        <h3>Boost Breeding:</h3>
+        <ul>
+            <li>Hire veterinarians for a breeding bonus</li>
+            <li>Keep animals perfectly happy</li>
+            <li>Add preferred upgrades to exhibits</li>
+        </ul>
+    </div>
+
+    <div class="help-section">
+        <h2>👷 Staff</h2>
+        <p>Staff members provide bonuses to your zoo:</p>
+        
+        <ul>
+            <li><strong>Zoo Keepers:</strong> Boost animal happiness and cleanliness</li>
+            <li><strong>Veterinarians:</strong> Increase breeding success rate</li>
+            <li><strong>Janitors:</strong> Reduce visitor complaints</li>
+            <li><strong>Tour Guides:</strong> Increase visitor satisfaction</li>
+        </ul>
+        
+        <div class="tip-box warning">
+            <strong>⚠️ Warning:</strong> Each staff member has a maximum hire limit. Check their card for details!
+        </div>
+    </div>
+
+    <div class="help-section">
+        <h2>🏆 Achievements</h2>
+        <p>Complete achievements to unlock rare animals and bragging rights!</p>
+        
+        <h3>Popular Achievements:</h3>
+        <ul>
+            <li><strong>First Animal:</strong> Buy your first animal</li>
+            <li><strong>Animal Collector:</strong> Own 10 animals</li>
+            <li><strong>First Profit:</strong> Reach $10,000</li>
+            <li><strong>Zoo Mogul:</strong> Reach $100,000</li>
+            <li><strong>New Arrival:</strong> Breed your first animal</li>
+        </ul>
+        
+        <p>Check the <strong>Achievements</strong> tab to see your progress!</p>
+    </div>
+
+    <div class="help-section">
+        <h2>📊 Reports</h2>
+        <p>The Reports tab shows your zoo's performance over time:</p>
+        
+        <ul>
+            <li><strong>Income Graph:</strong> Track your monthly earnings</li>
+            <li><strong>Visitor Trends:</strong> See how many visitors you're attracting</li>
+            <li><strong>Monthly Stats:</strong> Detailed breakdown of each month</li>
+        </ul>
+    </div>
+
+    <div class="help-section">
+        <h2>🎮 Advanced Tips</h2>
+        
+        <ul>
+            <li><strong>Start Small:</strong> Begin with cheap animals like chickens and pygmy goats</li>
+            <li><strong>Balance Exhibits:</strong> Don't put carnivores with herbivores!</li>
+            <li><strong>Save Money:</strong> Keep a cash reserve for unexpected expenses</li>
+            <li><strong>Upgrade Wisely:</strong> Only buy upgrades that animals actually prefer</li>
+            <li><strong>Monitor Visitors:</strong> Check the Visitors tab daily for complaints</li>
+            <li><strong>Breed Strategically:</strong> Focus on high-income animals first</li>
+        </ul>
+    </div>
+
+    <div class="help-section">
+        <h2>❓ Troubleshooting</h2>
+        
+        <h3>My animals won't breed!</h3>
+        <ul>
+            <li>Make sure you have both males and females</li>
+            <li>Check that happiness is at 100%</li>
+            <li>Verify you have the minimum number of animals</li>
+            <li>Breeding is random - keep trying!</li>
+        </ul>
+        
+        <h3>I'm losing money!</h3>
+        <ul>
+            <li>Build more amenities to increase revenue</li>
+            <li>Reduce staff if you can't afford salaries</li>
+            <li>Add more animals to attract visitors</li>
+            <li>Check your animal upkeep costs</li>
+        </ul>
+        
+        <h3>Visitors are complaining!</h3>
+        <ul>
+            <li>Build more benches for seating</li>
+            <li>Add more restrooms</li>
+            <li>Build food stands</li>
+            <li>Hire janitors to reduce complaints</li>
+        </ul>
+    </div>
+
+    <div class="help-section">
+        <h2> More Help</h2>
+        <p>Still have questions? Check out these resources:</p>
+        <ul>
+            <li><a href="privacy.html" style="color: var(--accent);">Privacy Policy</a> - Learn about data collection</li>
+            <li><a href="index.html" style="color: var(--accent);">Back to Home</a></li>
+            <li><a href="game.html" style="color: var(--accent);">Play Game</a></li>
+        </ul>
+    </div>
+</div>
+
+<footer>
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="game.html">Play Game</a>
+        <a href="help.html">Help</a>
+        <a href="privacy.html">Privacy</a>
+    </div>
+    <p style="color: var(--muted);">🦁 Zoo Tycoon © 2026</p>
+</footer>
+
+</body>
+</html>
