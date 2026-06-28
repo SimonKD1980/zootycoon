@@ -2035,6 +2035,10 @@ function renderExhibits() {
         const happiness = getExhibitHappiness(group);
         const upgradeCount = group.upgrades?.length || 0;
 
+        // ✅ Calculate costs BEFORE the template literal
+        const dailyFoodCost = group.animals.reduce((sum, a) => sum + (a.foodCost || 2), 0);
+        const dailyExhibitCost = 5 + dailyFoodCost;
+
         const div = document.createElement("div");
         div.className = "exhibitCard";
 
@@ -2042,6 +2046,7 @@ function renderExhibits() {
             ? group.animals.map((a, i) => `<span class="animalTag" data-exhibit="${id}" data-index="${i}">${a.name} (${a.gender})</span>`).join("")
             : "<em style='color:var(--muted)'>No animals yet</em>";
 
+        // ✅ Now use ${dailyFoodCost} and ${dailyExhibitCost} inside the template
         div.innerHTML = `
             <div class="exhibit-header">
                 <h3>🏞 ${group.name}</h3>
@@ -2059,19 +2064,14 @@ function renderExhibits() {
                 <div class="happiness-bar">
                     <div class="happiness-fill" style="width:${happiness}%"></div>
                 </div>
-const dailyFoodCost = group.animals.reduce((sum, a) => sum + (a.foodCost || 2), 0);
-const dailyExhibitCost = 5 + dailyFoodCost;
-
-// Add to exhibit-body:
-<div class="exhibit-stat">
-    <span>🍖 Daily Food</span>
-    <strong style="color: var(--warn);">$${dailyFoodCost}</strong>
-</div>
-<div class="exhibit-stat">
-    <span>🧾 Total Upkeep</span>
-    <strong style="color: var(--danger);">$${dailyExhibitCost}/day</strong>
-</div>
-                
+                <div class="exhibit-stat">
+                    <span>🍖 Daily Food</span>
+                    <strong style="color: var(--warn);">$${dailyFoodCost}</strong>
+                </div>
+                <div class="exhibit-stat">
+                    <span>🧾 Total Upkeep</span>
+                    <strong style="color: var(--danger);">$${dailyExhibitCost}/day</strong>
+                </div>
                 <div class="exhibit-stat">
                     <span>🏗 Upgrades</span>
                     <strong>${upgradeCount}</strong>
@@ -2107,7 +2107,7 @@ const dailyExhibitCost = 5 + dailyFoodCost;
         box.appendChild(div);
     });
 }
-
+  
 function renderVisitors() {
     const box = document.getElementById("visitors");
     
