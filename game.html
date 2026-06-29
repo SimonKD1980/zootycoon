@@ -2050,108 +2050,119 @@ function renderShopGrid() {
     });
 }
 
-ids.forEach((id) => {
-    const group = state.exhibits[id];
-    const isBuilt = !!state.builtEnclosures[id];
-    const isBuilding = group.buildDaysRemaining > 0;
-    const happiness = getExhibitHappiness(group);
-    const upgradeCount = group.upgrades?.length || 0;
-    const sizeInfo = EXHIBIT_SIZES[group.size] || EXHIBIT_SIZES.small;
-    
-    // Calculate costs
-    const dailyFoodCost = group.animals.reduce((sum, a) => sum + (a.foodCost || 2), 0);
-    const dailyExhibitCost = 5 + dailyFoodCost;
-    
-    const div = document.createElement("div");
-    div.className = "exhibitCard";
-    
-    // Status badge
-    let statusBadge = "";
-    if (isBuilding) {
-        const totalBuildDays = sizeInfo.buildDays;
-        const progress = ((totalBuildDays - group.buildDaysRemaining) / totalBuildDays) * 100;
-        statusBadge = `
-            <div style="font-size:0.8rem; margin-top:4px; color: var(--warn);">
-                🏗 Building... ${group.buildDaysRemaining} day${group.buildDaysRemaining !== 1 ? 's' : ''} left
+function renderExhibits() {
+    if (state.uiMode === "move") return;
+    const box = document.getElementById("exhibits");
+    box.innerHTML = "";
+    const ids = Object.keys(state.exhibits);
+
+    if (ids.length === 0) {
+        box.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted); grid-column: 1 / -1;"><h2>🏞 No Exhibits Yet</h2><p>Click "Build Exhibit" to get started!</p></div>';
+        return;
+    }
+
+    ids.forEach((id) => {
+        const group = state.exhibits[id];
+        const isBuilt = !!state.builtEnclosures[id];
+        const isBuilding = group.buildDaysRemaining > 0;
+        const happiness = getExhibitHappiness(group);
+        const upgradeCount = group.upgrades?.length || 0;
+        const sizeInfo = EXHIBIT_SIZES[group.size] || EXHIBIT_SIZES.small;
+        
+        // Calculate costs
+        const dailyFoodCost = group.animals.reduce((sum, a) => sum + (a.foodCost || 2), 0);
+        const dailyExhibitCost = 5 + dailyFoodCost;
+        
+        const div = document.createElement("div");
+        div.className = "exhibitCard";
+        
+        // Status badge
+        let statusBadge = "";
+        if (isBuilding) {
+            const totalBuildDays = sizeInfo.buildDays;
+            const progress = ((totalBuildDays - group.buildDaysRemaining) / totalBuildDays) * 100;
+            statusBadge = `
+                <div style="font-size:0.8rem; margin-top:4px; color: var(--warn);">
+                    🏗 Building... ${group.buildDaysRemaining} day${group.buildDaysRemaining !== 1 ? 's' : ''} left
+                </div>
+                <div class="happiness-bar" style="margin-top:6px;">
+                    <div class="happiness-fill" style="width:${progress}%; background: linear-gradient(90deg, var(--warn), var(--accent));"></div>
+                </div>
+            `;
+        } else if (isBuilt) {
+            statusBadge = `<div style="font-size:0.8rem; opacity:0.8; margin-top:4px;">✅ Built (${sizeInfo.label})</div>`;
+        } else {
+            statusBadge = `<div style="font-size:0.8rem; opacity:0.8; margin-top:4px;">⚠️ Not Built</div>`;
+        }
+
+        const animalList = group.animals.length > 0
+            ? group.animals.map((a, i) => `<span class="animalTag" data-exhibit="${id}" data-index="${i}">${a.name} (${a.gender})</span>`).join("")
+            : "<em style='color:var(--muted)'>No animals yet</em>";
+
+        div.innerHTML = `
+            <div class="exhibit-header">
+                <h3>🏞 ${group.name}</h3>
+                <div style="font-size:0.75rem; opacity:0.7; margin-top:2px;">${sizeInfo.emoji} ${sizeInfo.label} Exhibit</div>
+                ${statusBadge}
             </div>
-            <div class="happiness-bar" style="margin-top:6px;">
-                <div class="happiness-fill" style="width:${progress}%; background: linear-gradient(90deg, var(--warn), var(--accent));"></div>
+            <div class="exhibit-body">
+                <div class="exhibit-stat">
+                    <span>🐾 Animals</span>
+                    <strong>${group.animals.length}</strong>
+                </div>
+                <div class="exhibit-stat">
+                    <span>😊 Happiness</span>
+                    <strong style="color:${happiness >= 80 ? 'var(--accent)' : happiness >= 50 ? 'var(--warn)' : 'var(--danger)'}">${happiness}%</strong>
+                </div>
+                <div class="happiness-bar">
+                    <div class="happiness-fill" style="width:${happiness}%"></div>
+                </div>
+                <div class="exhibit-stat">
+                    <span>🍖 Daily Food</span>
+                    <strong style="color: var(--warn);">$${dailyFoodCost}</strong>
+                </div>
+                <div class="exhibit-stat">
+                    <span>🧾 Total Upkeep</span>
+                    <strong style="color: var(--danger);">$${dailyExhibitCost}/day</strong>
+                </div>
+                <div class="exhibit-stat">
+                    <span>🏗 Upgrades</span>
+                    <strong>${upgradeCount}</strong>
+                </div>
+                <div class="animalList">${animalList}</div>
+                ${!isBuilding ? `
+                    <div style="display:flex; gap:6px; margin-top:8px;">
+                        <button class="secondary-btn" style="flex:1; padding:8px; font-size:0.85rem;">🏗 Upgrades</button>
+                        <button class="danger-btn" style="flex:1; padding:8px; font-size:0.85rem;">🗑 Remove</button>
+                    </div>
+                ` : `
+                    <div style="margin-top:8px; padding:10px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; text-align:center; color: var(--warn); font-size:0.85rem;">
+                        ⏳ Cannot modify while under construction
+                    </div>
+                `}
             </div>
         `;
-    } else if (isBuilt) {
-        statusBadge = `<div style="font-size:0.8rem; opacity:0.8; margin-top:4px;">✅ Built (${sizeInfo.label})</div>`;
-    } else {
-        statusBadge = `<div style="font-size:0.8rem; opacity:0.8; margin-top:4px;">⚠️ Not Built</div>`;
-    }
 
-    const animalList = group.animals.length > 0
-        ? group.animals.map((a, i) => `<span class="animalTag" data-exhibit="${id}" data-index="${i}">${a.name} (${a.gender})</span>`).join("")
-        : "<em style='color:var(--muted)'>No animals yet</em>";
+        // Only wire up buttons if not building
+        if (!isBuilding) {
+            div.querySelectorAll(".danger-btn")[0].onclick = () => {
+                if (group.animals.length > 0) return showToast("Cannot remove exhibit with animals inside!", "error");
+                // Refund 50% of original cost
+                const refund = Math.floor(sizeInfo.cost * 0.5);
+                state.money += refund;
+                showFloatingMoney(refund);
+                delete state.exhibits[id];
+                delete state.builtEnclosures[id];
+                addTicker(`💰 Demolished ${group.name} (refunded $${refund})`);
+                updateUI(); renderExhibits();
+            };
 
-    div.innerHTML = `
-        <div class="exhibit-header">
-            <h3>🏞 ${group.name}</h3>
-            <div style="font-size:0.75rem; opacity:0.7; margin-top:2px;">${sizeInfo.emoji} ${sizeInfo.label} Exhibit</div>
-            ${statusBadge}
-        </div>
-        <div class="exhibit-body">
-            <div class="exhibit-stat">
-                <span>🐾 Animals</span>
-                <strong>${group.animals.length}</strong>
-            </div>
-            <div class="exhibit-stat">
-                <span>😊 Happiness</span>
-                <strong style="color:${happiness >= 80 ? 'var(--accent)' : happiness >= 50 ? 'var(--warn)' : 'var(--danger)'}">${happiness}%</strong>
-            </div>
-            <div class="happiness-bar">
-                <div class="happiness-fill" style="width:${happiness}%"></div>
-            </div>
-            <div class="exhibit-stat">
-                <span>🍖 Daily Food</span>
-                <strong style="color: var(--warn);">$${dailyFoodCost}</strong>
-            </div>
-            <div class="exhibit-stat">
-                <span>🧾 Total Upkeep</span>
-                <strong style="color: var(--danger);">$${dailyExhibitCost}/day</strong>
-            </div>
-            <div class="exhibit-stat">
-                <span>🏗 Upgrades</span>
-                <strong>${upgradeCount}</strong>
-            </div>
-            <div class="animalList">${animalList}</div>
-            ${!isBuilding ? `
-                <div style="display:flex; gap:6px; margin-top:8px;">
-                    <button class="secondary-btn" style="flex:1; padding:8px; font-size:0.85rem;">🏗 Upgrades</button>
-                    <button class="danger-btn" style="flex:1; padding:8px; font-size:0.85rem;">🗑 Remove</button>
-                </div>
-            ` : `
-                <div style="margin-top:8px; padding:10px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; text-align:center; color: var(--warn); font-size:0.85rem;">
-                    ⏳ Cannot modify while under construction
-                </div>
-            `}
-        </div>
-    `;
+            div.querySelectorAll(".secondary-btn")[0].onclick = () => openUpgradeMenu(id);
+        }
 
-    // Only wire up buttons if not building
-    if (!isBuilding) {
-        div.querySelectorAll(".danger-btn")[0].onclick = () => {
-            if (group.animals.length > 0) return showToast("Cannot remove exhibit with animals inside!", "error");
-            // Refund 50% of original cost
-            const refund = Math.floor(sizeInfo.cost * 0.5);
-            state.money += refund;
-            showFloatingMoney(refund);
-            delete state.exhibits[id];
-            delete state.builtEnclosures[id];
-            addTicker(`💰 Demolished ${group.name} (refunded $${refund})`);
-            updateUI(); renderExhibits();
-        };
-
-        div.querySelectorAll(".secondary-btn")[0].onclick = () => openUpgradeMenu(id);
-    }
-
-    box.appendChild(div);
-});
-  
+        box.appendChild(div);
+    });
+}  
 function renderVisitors() {
     const box = document.getElementById("visitors");
     
