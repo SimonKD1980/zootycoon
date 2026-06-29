@@ -1219,7 +1219,7 @@ button:disabled {
 
 <div style="padding: 10px; display: flex; gap: 10px;">
     <button id="resetGameBtn" class="removeBtn">🧨 Reset Zoo</button>
-    <button id="buildExhibitBtn" class="buildBtn">🏗 Build Exhibit ($1000)</button>
+    <button id="buildExhibitBtn" class="buildBtn">🏗 Build Exhibit</button>
     <button id="endDayBtn" class="moveBtn">⏭ End Day</button>
     
 </div>
@@ -1252,7 +1252,14 @@ button:disabled {
         <button onclick="closeAnimalInfo()" class="removeBtn">Close</button>
     </div>
 </div>
-
+<div id="buildModal" class="modal">
+    <div class="modal-content">
+        <h3>🏗 Build New Exhibit</h3>
+        <p style="color: var(--muted); margin-bottom: 15px;">Choose the size of your new exhibit.</p>
+        <div id="buildSizeOptions" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        <button onclick="closeBuildModal()" class="removeBtn" style="margin-top: 10px;">Cancel</button>
+    </div>
+</div>
 <div id="upgradeModal" class="modal">
     <div class="modal-content">
         <h3>🏗 Select Upgrade</h3>
@@ -1269,7 +1276,17 @@ button:disabled {
    ========================================= */
 const ANIMAL_UPKEEP_BASE = 2;
 const ANIMAL_UPKEEP_RATE = 0.15;
-const EXHIBIT_BUILD_COST = 1000;
+const EXHIBIT_SIZES = {
+    small:  { cost: 1000,  buildDays: 3,  label: "Small",  emoji: "🟢" },
+    medium: { cost: 2500,  buildDays: 6,  label: "Medium", emoji: "🟡" },
+    large:  { cost: 5000,  buildDays: 10, label: "Large",  emoji: "🔴" }
+};
+
+const SIZE_RANK = { small: 1, medium: 2, large: 3 };
+function exhibitSizeOk(exhibitSize, requiredSize) {
+    return SIZE_RANK[exhibitSize] >= SIZE_RANK[requiredSize];
+}
+  
 let state = {
     money: 10000,
     day: 1,
@@ -1806,6 +1823,21 @@ function checkAchievements() {
 }
 
 function processDailyMaintenance() {
+
+  // Decrement build timers
+for (const id in state.exhibits) {
+    const ex = state.exhibits[id];
+    if (ex.buildDaysRemaining > 0) {
+        ex.buildDaysRemaining--;
+        if (ex.buildDaysRemaining === 0) {
+            state.builtEnclosures[id] = true;
+            addTicker(`✅ ${ex.name} is now complete!`);
+            showToast(`${ex.name} finished building! 🎉`, "info");
+        }
+    }
+}
+
+  
     let maintenanceCost = 0;
     
     for (const id in data.amenities) {
@@ -2018,95 +2050,107 @@ function renderShopGrid() {
     });
 }
 
-function renderExhibits() {
-    if (state.uiMode === "move") return;
-    const box = document.getElementById("exhibits");
-    box.innerHTML = "";
-    const ids = Object.keys(state.exhibits);
-
-    if (ids.length === 0) {
-        box.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted); grid-column: 1 / -1;"><h2>🏞 No Exhibits Yet</h2><p>Click "Build Exhibit" to get started!</p></div>';
-        return;
+ids.forEach((id) => {
+    const group = state.exhibits[id];
+    const isBuilt = !!state.builtEnclosures[id];
+    const isBuilding = group.buildDaysRemaining > 0;
+    const happiness = getExhibitHappiness(group);
+    const upgradeCount = group.upgrades?.length || 0;
+    const sizeInfo = EXHIBIT_SIZES[group.size] || EXHIBIT_SIZES.small;
+    
+    // Calculate costs
+    const dailyFoodCost = group.animals.reduce((sum, a) => sum + (a.foodCost || 2), 0);
+    const dailyExhibitCost = 5 + dailyFoodCost;
+    
+    const div = document.createElement("div");
+    div.className = "exhibitCard";
+    
+    // Status badge
+    let statusBadge = "";
+    if (isBuilding) {
+        const totalBuildDays = sizeInfo.buildDays;
+        const progress = ((totalBuildDays - group.buildDaysRemaining) / totalBuildDays) * 100;
+        statusBadge = `
+            <div style="font-size:0.8rem; margin-top:4px; color: var(--warn);">
+                🏗 Building... ${group.buildDaysRemaining} day${group.buildDaysRemaining !== 1 ? 's' : ''} left
+            </div>
+            <div class="happiness-bar" style="margin-top:6px;">
+                <div class="happiness-fill" style="width:${progress}%; background: linear-gradient(90deg, var(--warn), var(--accent));"></div>
+            </div>
+        `;
+    } else if (isBuilt) {
+        statusBadge = `<div style="font-size:0.8rem; opacity:0.8; margin-top:4px;">✅ Built (${sizeInfo.label})</div>`;
+    } else {
+        statusBadge = `<div style="font-size:0.8rem; opacity:0.8; margin-top:4px;">⚠️ Not Built</div>`;
     }
 
-    ids.forEach((id) => {
-        const group = state.exhibits[id];
-        const isBuilt = !!state.builtEnclosures[id];
-        const happiness = getExhibitHappiness(group);
-        const upgradeCount = group.upgrades?.length || 0;
+    const animalList = group.animals.length > 0
+        ? group.animals.map((a, i) => `<span class="animalTag" data-exhibit="${id}" data-index="${i}">${a.name} (${a.gender})</span>`).join("")
+        : "<em style='color:var(--muted)'>No animals yet</em>";
 
-        // ✅ Calculate costs BEFORE the template literal
-        const dailyFoodCost = group.animals.reduce((sum, a) => sum + (a.foodCost || 2), 0);
-        const dailyExhibitCost = 5 + dailyFoodCost;
-
-        const div = document.createElement("div");
-        div.className = "exhibitCard";
-
-        const animalList = group.animals.length > 0
-            ? group.animals.map((a, i) => `<span class="animalTag" data-exhibit="${id}" data-index="${i}">${a.name} (${a.gender})</span>`).join("")
-            : "<em style='color:var(--muted)'>No animals yet</em>";
-
-        // ✅ Now use ${dailyFoodCost} and ${dailyExhibitCost} inside the template
-        div.innerHTML = `
-            <div class="exhibit-header">
-                <h3>🏞 ${group.name}</h3>
-                <div style="font-size:0.8rem; opacity:0.8; margin-top:4px;">${isBuilt ? "✅ Built" : "⚠️ Not Built"}</div>
+    div.innerHTML = `
+        <div class="exhibit-header">
+            <h3>🏞 ${group.name}</h3>
+            <div style="font-size:0.75rem; opacity:0.7; margin-top:2px;">${sizeInfo.emoji} ${sizeInfo.label} Exhibit</div>
+            ${statusBadge}
+        </div>
+        <div class="exhibit-body">
+            <div class="exhibit-stat">
+                <span>🐾 Animals</span>
+                <strong>${group.animals.length}</strong>
             </div>
-            <div class="exhibit-body">
-                <div class="exhibit-stat">
-                    <span>🐾 Animals</span>
-                    <strong>${group.animals.length}</strong>
-                </div>
-                <div class="exhibit-stat">
-                    <span>😊 Happiness</span>
-                    <strong style="color:${happiness >= 80 ? 'var(--accent)' : happiness >= 50 ? 'var(--warn)' : 'var(--danger)'}">${happiness}%</strong>
-                </div>
-                <div class="happiness-bar">
-                    <div class="happiness-fill" style="width:${happiness}%"></div>
-                </div>
-                <div class="exhibit-stat">
-                    <span>🍖 Daily Food</span>
-                    <strong style="color: var(--warn);">$${dailyFoodCost}</strong>
-                </div>
-                <div class="exhibit-stat">
-                    <span>🧾 Total Upkeep</span>
-                    <strong style="color: var(--danger);">$${dailyExhibitCost}/day</strong>
-                </div>
-                <div class="exhibit-stat">
-                    <span>🏗 Upgrades</span>
-                    <strong>${upgradeCount}</strong>
-                </div>
-                <div class="animalList">${animalList}</div>
+            <div class="exhibit-stat">
+                <span>😊 Happiness</span>
+                <strong style="color:${happiness >= 80 ? 'var(--accent)' : happiness >= 50 ? 'var(--warn)' : 'var(--danger)'}">${happiness}%</strong>
+            </div>
+            <div class="happiness-bar">
+                <div class="happiness-fill" style="width:${happiness}%"></div>
+            </div>
+            <div class="exhibit-stat">
+                <span>🍖 Daily Food</span>
+                <strong style="color: var(--warn);">$${dailyFoodCost}</strong>
+            </div>
+            <div class="exhibit-stat">
+                <span>🧾 Total Upkeep</span>
+                <strong style="color: var(--danger);">$${dailyExhibitCost}/day</strong>
+            </div>
+            <div class="exhibit-stat">
+                <span>🏗 Upgrades</span>
+                <strong>${upgradeCount}</strong>
+            </div>
+            <div class="animalList">${animalList}</div>
+            ${!isBuilding ? `
                 <div style="display:flex; gap:6px; margin-top:8px;">
                     <button class="secondary-btn" style="flex:1; padding:8px; font-size:0.85rem;">🏗 Upgrades</button>
                     <button class="danger-btn" style="flex:1; padding:8px; font-size:0.85rem;">🗑 Remove</button>
                 </div>
-                ${!isBuilt ? `<button class="primary-btn" style="padding:10px; font-size:0.9rem;">Build Enclosure ($${EXHIBIT_BUILD_COST})</button>` : ""}
-            </div>
-        `;
+            ` : `
+                <div style="margin-top:8px; padding:10px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; text-align:center; color: var(--warn); font-size:0.85rem;">
+                    ⏳ Cannot modify while under construction
+                </div>
+            `}
+        </div>
+    `;
 
+    // Only wire up buttons if not building
+    if (!isBuilding) {
         div.querySelectorAll(".danger-btn")[0].onclick = () => {
             if (group.animals.length > 0) return showToast("Cannot remove exhibit with animals inside!", "error");
+            // Refund 50% of original cost
+            const refund = Math.floor(sizeInfo.cost * 0.5);
+            state.money += refund;
+            showFloatingMoney(refund);
             delete state.exhibits[id];
             delete state.builtEnclosures[id];
+            addTicker(`💰 Demolished ${group.name} (refunded $${refund})`);
             updateUI(); renderExhibits();
         };
 
         div.querySelectorAll(".secondary-btn")[0].onclick = () => openUpgradeMenu(id);
+    }
 
-        const buildBtn = div.querySelector(".primary-btn");
-        if (buildBtn) {
-            buildBtn.onclick = () => {
-                if (state.money < EXHIBIT_BUILD_COST) return showToast(`Need $${EXHIBIT_BUILD_COST} to build enclosure!`, "error");
-                state.money -= EXHIBIT_BUILD_COST;
-                showFloatingMoney(-EXHIBIT_BUILD_COST);
-                state.builtEnclosures[id] = true;
-                updateUI(); renderExhibits();
-            };
-        }
-        box.appendChild(div);
-    });
-}
+    box.appendChild(div);
+});
   
 function renderVisitors() {
     const box = document.getElementById("visitors");
@@ -2850,16 +2894,69 @@ document.addEventListener("click", (e) => {
 });
 
 document.getElementById("buildExhibitBtn").onclick = () => {
-    if (state.money < EXHIBIT_BUILD_COST) return showToast(`Need $${EXHIBIT_BUILD_COST} to build an exhibit!`, "error");
-    state.money -= EXHIBIT_BUILD_COST;
-    showFloatingMoney(-EXHIBIT_BUILD_COST);
+    const modal = document.getElementById("buildModal");
+    const options = document.getElementById("buildSizeOptions");
+    options.innerHTML = "";
+    
+    for (const size in EXHIBIT_SIZES) {
+        const info = EXHIBIT_SIZES[size];
+        const canAfford = state.money >= info.cost;
+        
+        const btn = document.createElement("button");
+        btn.className = "primary-btn";
+        btn.style.width = "100%";
+        btn.style.marginBottom = "8px";
+        btn.style.opacity = canAfford ? "1" : "0.5";
+        btn.style.cursor = canAfford ? "pointer" : "not-allowed";
+        btn.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="text-align: left;">
+                    <div style="font-weight: 800;">${info.emoji} ${info.label} Exhibit</div>
+                    <div style="font-size: 0.8rem; opacity: 0.8;">⏱ ${info.buildDays} days to build</div>
+                </div>
+                <div style="font-weight: 800;">$${info.cost.toLocaleString()}</div>
+            </div>
+        `;
+        
+        if (canAfford) {
+            btn.onclick = () => {
+                buildExhibit(size);
+                closeBuildModal();
+            };
+        }
+        
+        options.appendChild(btn);
+    }
+    
+    modal.classList.add("active");
+};
+
+function closeBuildModal() {
+    document.getElementById("buildModal").classList.remove("active");
+}
+
+function buildExhibit(size) {
+    const info = EXHIBIT_SIZES[size];
+    if (state.money < info.cost) return showToast("Not enough money!", "error");
+    
+    state.money -= info.cost;
+    showFloatingMoney(-info.cost);
+    
     const next = Object.keys(state.exhibits).length + 1;
     const id = "exhibit" + next;
     
-    state.exhibits[id] = { name: "Exhibit " + next, size: "small", animals: [], upgrades: [] };
-    state.builtEnclosures[id] = true;
-    updateUI(); renderExhibits();
-};
+    state.exhibits[id] = {
+        name: `Exhibit ${next}`,
+        size: size,
+        animals: [],
+        upgrades: [],
+        buildDaysRemaining: info.buildDays
+    };
+    
+    addTicker(`🏗 Started building ${info.label} Exhibit (ready in ${info.buildDays} days)`);
+    updateUI();
+    renderExhibits();
+}
 
 document.getElementById("endDayBtn").onclick = advanceDay;
 
