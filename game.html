@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.6 </title>
+<title>ZooSmith V0.2.7 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -1209,6 +1209,7 @@ button:disabled {
     <button onclick="showSection('leaderboard', event)">🏆 Leaderboard</button>
     <button class="active" onclick="showSection('shop', event)">🛒 Shop</button>
     <button onclick="showSection('exhibits', event)">🏞 Exhibits</button>
+  <button onclick="showSection('research', event)">🔬 Research</button>
     <button onclick="showSection('visitors', event)">👥 Visitors</button>
   <button onclick="showSection('supplies', event)">🍽 Supplies</button>
     <button onclick="showSection('achievements', event)">🏆 Achievements</button>
@@ -1228,6 +1229,7 @@ button:disabled {
 <div id="facilities" class="section"></div>
 <div id="shop" class="section active"></div>
 <div id="exhibits" class="section"></div>
+  <div id="research" class="section"></div>
 <div id="visitors" class="section"></div>
 <div id="supplies" class="section"></div>  
 <div id="amenities" class="section"></div>
@@ -2244,6 +2246,7 @@ function showSection(section, event) {
     if (section === "amenities") renderAmenities();
     if (section === "leaderboard") renderLeaderboard();
   if (section === "supplies") renderSupplies();
+   if (section === "research") renderResearch();  
 }
 
 let currentCategory = 'all';
