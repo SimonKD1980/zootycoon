@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.7 </title>
+<title>ZooSmith V0.2.8 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -3806,12 +3806,16 @@ async function updateLeaderboardContent() {
 
 function renderResearch() {
     const box = document.getElementById("research");
+    if (!box) return;
     
     // Safety check: don't render if data hasn't loaded yet
     if (!data.researchProjects || Object.keys(data.researchProjects).length === 0) {
         box.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted);">🔬 Loading research data...</div>';
         return;
     }
+    
+    // Ensure data.animals exists
+    const animals = data.animals || [];
     
     // Current research card
     let activeResearchHTML = '';
@@ -3852,8 +3856,8 @@ function renderResearch() {
                         <div style="margin-top: 12px; padding: 10px; background: #0b1220; border-radius: 8px;">
                             <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 6px;">🔓 Unlocks:</div>
                             <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                                ${project.unlocks.map(id => {
-                                    const animal = data.animals.find(a => a.id === id);
+                                ${(project.unlocks || []).map(id => {
+                                    const animal = animals.find(a => a.id === id);
                                     return animal ? `<span class="stat-badge green">${animal.name}</span>` : '';
                                 }).join('')}
                             </div>
@@ -3877,8 +3881,8 @@ function renderResearch() {
     // Completed research summary
     const completedCount = state.completedResearch.length;
     const totalCount = Object.keys(data.researchProjects).length;
-    const unlockedAnimals = data.animals.filter(a => !a.researchRequired || isResearchComplete(a.researchRequired)).length;
-    const totalAnimals = data.animals.length;
+    const unlockedAnimals = animals.filter(a => !a.researchRequired || isResearchComplete(a.researchRequired)).length;
+    const totalAnimals = animals.length;
     
     // Group projects by tier
     const tiers = ['basic', 'advanced', 'exotic', 'legendary'];
@@ -3951,10 +3955,10 @@ function renderResearch() {
                             ${project.requires ? `<span class="stat-badge purple">🔗 Requires: ${data.researchProjects[project.requires]?.name || '???'}</span>` : ''}
                         </div>
                         <div style="padding: 10px; background: #0b1220; border-radius: 8px; margin-bottom: 10px;">
-                            <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 6px;">🔓 Unlocks ${project.unlocks.length} animal${project.unlocks.length !== 1 ? 's' : ''}:</div>
+                            <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 6px;">🔓 Unlocks ${(project.unlocks || []).length} animal${(project.unlocks || []).length !== 1 ? 's' : ''}:</div>
                             <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                                ${project.unlocks.map(id => {
-                                    const animal = data.animals.find(a => a.id === id);
+                                ${(project.unlocks || []).map(id => {
+                                    const animal = animals.find(a => a.id === id);
                                     if (!animal) return '';
                                     const unlocked = !animal.researchRequired || isResearchComplete(animal.researchRequired);
                                     return `<span class="stat-badge ${unlocked ? 'green' : ''}">${unlocked ? '✅' : '🔒'} ${animal.name}</span>`;
@@ -3997,7 +4001,6 @@ function renderResearch() {
         </div>
     `;
 }
-
 function changeLeaderboardCategory(category) {
     leaderboardCategory = category;
     renderLeaderboard();
