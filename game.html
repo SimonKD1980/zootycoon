@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.1 </title>
+<title>ZooSmith V0.2.3 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -1709,9 +1709,13 @@ function processUpkeep() {
         // $5 base exhibit maintenance
         totalCost += 5;
         
-        // Food cost per animal
+        // Food cost per animal (with pregnancy premium)
         for (const animal of exhibit.animals) {
-            totalCost += animal.foodCost || 2; // fallback for old saves
+            let cost = animal.foodCost || 2;
+            if (animal.isPregnant) {
+                cost = Math.ceil(cost * 1.5);  // +50% for pregnancy
+            }
+            totalCost += cost;
         }
     }
     state.money -= totalCost;
@@ -1731,7 +1735,8 @@ function tryBreeding(exhibit) {
     for (const species in groups) {
         const group = groups[species];
         const males = group.filter(a => a.gender === "male");
-        const females = group.filter(a => a.gender === "female");
+        // ✅ Skip pregnant females — they can't breed again
+        const females = group.filter(a => a.gender === "female" && !a.isPregnant);
 
         if (males.length === 0 || females.length === 0) continue;
         if (getExhibitHappiness(exhibit) < 100) continue;
@@ -1742,29 +1747,27 @@ function tryBreeding(exhibit) {
         const chance = baseChance * (1 + staffEffects.breedingBonus);
 
         if (Math.random() < chance) {
-            const baby = {
-                id: species,
-                name: getNextAnimalName(animalData.name),
-                gender: Math.random() < 0.5 ? "male" : "female",
-                ageDays: 0,
-                dailyIncome: animalData.dailyIncome,
-                variation: null,
-                foodCost: animalData.foodCost,
-                compatibleWith: animalData.compatibleWith,
-                minInExhibit: animalData.minInExhibit,
-                maxInExhibit: animalData.maxInExhibit,
-                breedChance: animalData.breedChance,
-                bornInZoo: true
-            };
-            exhibit.animals.push(baby);
-            state.bredAnimals++;
+            // Pick a random female to become pregnant
+            const mother = females[Math.floor(Math.random() * females.length)];
+            const father = males[Math.floor(Math.random() * males.length)];
+            
+            // Look up gestation from JSON data, fallback to 10 days
+            const speciesData = data.animals.find(a => a.id === species);
+            const gestationDays = speciesData?.gestationDays || 10;
+            
+            mother.isPregnant = true;
+            mother.daysUntilBirth = gestationDays;
+            mother.babySpecies = species;
+            mother.babyFather = father.name;
+            
             state.daysSinceNewAnimal = 0;
-            addTicker(`🍼 A new ${baby.name} was born! Visitor excitement is high!`);
+            addTicker(`🤰 ${mother.name} is pregnant! Baby due in ${gestationDays} days.`);
+            showToast(`${mother.name} is expecting! 🍼`, "info");
         }
     }
 }
 
-function getExhibitHappiness(exhibit) {
+  function getExhibitHappiness(exhibit) {
     if (!exhibit || !exhibit.animals?.length) return 0;
     let total = 0;
 
@@ -1889,6 +1892,46 @@ function advanceDay() {
 
     for (const id in state.exhibits) tryBreeding(state.exhibits[id]);
 
+    // ✅ NEW: Process pregnancies
+    for (const id in state.exhibits) {
+        const exhibit = state.exhibits[id];
+        for (const animal of exhibit.animals) {
+            if (animal.isPregnant) {
+                animal.daysUntilBirth--;
+                if (animal.daysUntilBirth <= 0) {
+                    // Give birth!
+                    const species = animal.babySpecies || animal.id;
+                    const speciesData = data.animals.find(a => a.id === species);
+                    
+                    const baby = {
+                        id: species,
+                        name: getNextAnimalName(speciesData?.name || species),
+                        gender: Math.random() < 0.5 ? "male" : "female",
+                        ageDays: 0,
+                        dailyIncome: animal.dailyIncome,
+                        foodCost: animal.foodCost,
+                        variation: null,
+                        compatibleWith: animal.compatibleWith,
+                        minInExhibit: animal.minInExhibit,
+                        maxInExhibit: animal.maxInExhibit,
+                        breedChance: animal.breedChance,
+                        bornInZoo: true
+                    };
+                    
+                    exhibit.animals.push(baby);
+                    animal.isPregnant = false;
+                    delete animal.daysUntilBirth;
+                    delete animal.babySpecies;
+                    delete animal.babyFather;
+                    
+                    state.bredAnimals++;
+                    addTicker(`🍼 ${baby.name} was born to ${animal.name}!`);
+                    showToast(`🎉 ${baby.name} has been born!`, "info");
+                }
+            }
+        }
+    }
+  
     state.day++;
     if (state.day > 30) {
         state.day = 1;
@@ -2113,10 +2156,13 @@ function renderExhibits() {
         } else {
             statusBadge = `<div style="font-size:0.8rem; opacity:0.8; margin-top:4px;">⚠️ Not Built</div>`;
         }
-
-        const animalList = group.animals.length > 0
-            ? group.animals.map((a, i) => `<span class="animalTag" data-exhibit="${id}" data-index="${i}">${a.name} (${a.gender})</span>`).join("")
-            : "<em style='color:var(--muted)'>No animals yet</em>";
+const pregnantCount = group.animals.filter(a => a.isPregnant).length;
+const animalList = group.animals.length > 0
+    ? group.animals.map((a, i) => {
+        const pregnantTag = a.isPregnant ? '🤰 ' : '';
+        return `<span class="animalTag" data-exhibit="${id}" data-index="${i}">${pregnantTag}${a.name} (${a.gender})</span>`;
+    }).join("")
+    : "<em style='color:var(--muted)'>No animals yet</em>";
 
         div.innerHTML = `
             <div class="exhibit-header">
@@ -2133,6 +2179,12 @@ function renderExhibits() {
                     <span>😊 Happiness</span>
                     <strong style="color:${happiness >= 80 ? 'var(--accent)' : happiness >= 50 ? 'var(--warn)' : 'var(--danger)'}">${happiness}%</strong>
                 </div>
+                ${pregnantCount > 0 ? `
+    <div class="exhibit-stat">
+        <span>🤰 Pregnant</span>
+        <strong style="color: var(--purple);">${pregnantCount}</strong>
+    </div>
+` : ''}
                 <div class="happiness-bar">
                     <div class="happiness-fill" style="width:${happiness}%"></div>
                 </div>
@@ -2687,7 +2739,38 @@ document.getElementById("confirmBuyBtn").onclick = () => {
 
 function openAnimalInfo(animal, exhibitId, index) {
     const content = document.getElementById("animalInfoContent");
+   let pregnancyInfo = "";
+    if (animal.isPregnant) {
+        pregnancyInfo = `
+            <div style="margin-top: 15px; padding: 12px; background: rgba(168, 85, 247, 0.1); border: 1px solid var(--purple); border-radius: 8px;">
+                <h4 style="margin: 0 0 8px 0; color: var(--purple);">🤰 Pregnant</h4>
+                <p style="margin: 0; font-size: 0.9rem;">
+                    Due in <strong>${animal.daysUntilBirth}</strong> day${animal.daysUntilBirth !== 1 ? 's' : ''}<br>
+                    Father: <strong>${animal.babyFather || 'Unknown'}</strong><br>
+                    <span style="color: var(--warn); font-size: 0.8rem;">🍖 +50% food cost during pregnancy</span>
+                </p>
+            </div>
+        `;
+    }
+    
     content.innerHTML = `
+        <h2>${animal.name}</h2>
+        <p>💰 Income: $${animal.dailyIncome}/day</p>
+        <p>🍖 Food: $${animal.foodCost || 2}/day</p>
+        <p>👥 Needs: ${animal.minInExhibit} - ${animal.maxInExhibit}</p>
+        <p>🏞 Exhibit: ${state.exhibits[exhibitId]?.name ?? "Unknown"}</p>
+        ${animal.variation ? `<p>✨ Variant: ${animal.variation.name}</p>` : ""}
+        <p>🍼 Born in zoo: ${animal.bornInZoo ? "Yes" : "No"}</p>
+        ${pregnancyInfo}
+        <div style="margin-top: 15px; display: flex; gap: 10px;">
+            <button id="sellAnimalBtn" class="buildBtn">💸 Sell Animal</button>
+            <button id="moveFromInfoBtn" class="moveBtn">🔄 Move Animal</button>
+        </div>
+    `;
+  
+  
+  
+  content.innerHTML = `
         <h2>${animal.name}</h2>
         <p>💰 Income: $${animal.dailyIncome}/day</p>
         <p>👥 Needs: ${animal.minInExhibit} - ${animal.maxInExhibit}</p>
