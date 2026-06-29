@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.5 </title>
+<title>ZooSmith V0.2.6 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -1313,6 +1313,23 @@ function getDietFoodType(diet) {
     if (diet === "Omnivore") return "produce";
     return "hay";
 }
+
+let data = {
+    animals: [],
+    upgrades: {},
+    facilities: {},
+    staff: [],
+    amenities: {},
+    achievements: [],
+    researchProjects: {}  // ← Add this
+};
+
+const TIER_INFO = {
+    basic:     { label: "Basic",     color: "#22c55e", emoji: "🟢" },
+    advanced:  { label: "Advanced",  color: "#3b82f6", emoji: "🔵" },
+    exotic:    { label: "Exotic",    color: "#a855f7", emoji: "🟣" },
+    legendary: { label: "Legendary", color: "#fbbf24", emoji: "🌟" }
+};
   
 let state = {
     money: 10000,
@@ -1382,6 +1399,19 @@ async function loadShop() {
     } catch (e) { console.error("Failed to load animals", e); }
 }
 
+async function loadResearch() {
+    try {
+        const res = await fetch("research.json?nocache=" + Date.now());
+        const arr = await res.json();
+        data.researchProjects = {};
+        arr.forEach(item => data.researchProjects[item.id] = item);
+        renderResearch();
+        renderShop();
+    } catch (e) { 
+        console.error("Failed to load research", e);
+    }
+}
+  
 async function loadUpgrades() {
     try {
         const res = await fetch("upgrades.json?nocache=" + Date.now());
@@ -1544,6 +1574,20 @@ function getGameStats() {
         totalAmenities: totalAmenities,
         visitorSatisfaction: state.visitorSatisfaction
     };
+}
+
+function isResearchComplete(projectId) {
+    return state.completedResearch.includes(projectId);
+}
+
+function canStartResearch(projectId) {
+    const project = data.researchProjects[projectId];
+    if (!project) return false;
+    if (isResearchComplete(projectId)) return false;
+    if (state.activeResearch) return false;
+    if (project.requires && !isResearchComplete(project.requires)) return false;
+    if (state.money < project.cost) return false;
+    return true;
 }
 
 // NEW: Generic achievement check evaluator
@@ -3766,6 +3810,200 @@ async function updateLeaderboardContent() {
     `;
 }
 
+function renderResearch() {
+    const box = document.getElementById("research");
+    
+    // Safety check: don't render if data hasn't loaded yet
+    if (!data.researchProjects || Object.keys(data.researchProjects).length === 0) {
+        box.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted);">🔬 Loading research data...</div>';
+        return;
+    }
+    
+    // Current research card
+    let activeResearchHTML = '';
+    if (state.activeResearch) {
+        const project = data.researchProjects[state.activeResearch.projectId];
+        if (project) {
+            const totalDays = project.days;
+            const remaining = state.activeResearch.daysRemaining;
+            const progress = ((totalDays - remaining) / totalDays) * 100;
+            const tier = TIER_INFO[project.tier];
+            
+            activeResearchHTML = `
+                <div class="premium-card" style="grid-column: 1 / -1; border-color: ${tier.color}; box-shadow: 0 0 20px ${tier.color}33;">
+                    <div class="card-header" style="background: linear-gradient(135deg, ${tier.color}22, #0f172a);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <span style="font-size: 2rem; margin-right: 10px;">${project.icon}</span>
+                                <h3 style="display: inline;">Currently Researching: ${project.name}</h3>
+                            </div>
+                            <span class="stat-badge" style="background: ${tier.color}; color: #000; border-color: ${tier.color};">
+                                ${tier.emoji} ${tier.label}
+                            </span>
+                        </div>
+                        <div class="subtitle">${project.desc}</div>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                            <div style="font-size: 1.1rem; font-weight: 700;">
+                                ⏱ ${remaining} day${remaining !== 1 ? 's' : ''} remaining
+                            </div>
+                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--accent);">
+                                ${Math.round(progress)}% complete
+                            </div>
+                        </div>
+                        <div class="happiness-bar" style="height: 14px;">
+                            <div style="height: 100%; width: ${progress}%; background: linear-gradient(90deg, ${tier.color}, ${tier.color}cc); transition: width 0.3s;"></div>
+                        </div>
+                        <div style="margin-top: 12px; padding: 10px; background: #0b1220; border-radius: 8px;">
+                            <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 6px;">🔓 Unlocks:</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                ${project.unlocks.map(id => {
+                                    const animal = data.animals.find(a => a.id === id);
+                                    return animal ? `<span class="stat-badge green">${animal.name}</span>` : '';
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        activeResearchHTML = `
+            <div class="premium-card" style="grid-column: 1 / -1;">
+                <div class="card-body" style="text-align: center; padding: 30px;">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">🔬</div>
+                    <h3 style="margin: 0 0 8px 0;">No Active Research</h3>
+                    <p style="color: var(--muted); margin: 0;">Select a project below to begin research</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Completed research summary
+    const completedCount = state.completedResearch.length;
+    const totalCount = Object.keys(data.researchProjects).length;
+    const unlockedAnimals = data.animals.filter(a => !a.researchRequired || isResearchComplete(a.researchRequired)).length;
+    const totalAnimals = data.animals.length;
+    
+    // Group projects by tier
+    const tiers = ['basic', 'advanced', 'exotic', 'legendary'];
+    let projectsHTML = '';
+    
+    tiers.forEach(tierKey => {
+        const tier = TIER_INFO[tierKey];
+        const tierProjects = Object.values(data.researchProjects).filter(p => p.tier === tierKey);
+        if (tierProjects.length === 0) return;
+        
+        projectsHTML += `
+            <div style="grid-column: 1 / -1; margin-top: 10px;">
+                <h3 style="color: ${tier.color}; margin: 20px 0 10px 0; font-size: 1.2rem;">
+                    ${tier.emoji} ${tier.label} Research
+                </h3>
+            </div>
+        `;
+        
+        tierProjects.forEach(project => {
+            const completed = isResearchComplete(project.id);
+            const isActive = state.activeResearch?.projectId === project.id;
+            const prereqMet = !project.requires || isResearchComplete(project.requires);
+            const canAfford = state.money >= project.cost;
+            const canStart = canStartResearch(project.id);
+            
+            let statusBadge = '';
+            let buttonHTML = '';
+            let cardStyle = '';
+            
+            if (completed) {
+                statusBadge = `<span class="stat-badge green">✅ Completed</span>`;
+                cardStyle = 'border-color: var(--accent); opacity: 0.85;';
+                buttonHTML = `<button class="primary-btn" disabled style="opacity: 0.5;">Research Complete</button>`;
+            } else if (isActive) {
+                statusBadge = `<span class="stat-badge" style="background: ${tier.color}; color: #000;">🔄 In Progress</span>`;
+                cardStyle = `border-color: ${tier.color};`;
+                buttonHTML = `<button class="primary-btn" disabled style="opacity: 0.5;">Researching...</button>`;
+            } else if (!prereqMet) {
+                const prereqProject = data.researchProjects[project.requires];
+                statusBadge = `<span class="stat-badge danger">🔒 Locked</span>`;
+                cardStyle = 'opacity: 0.5;';
+                buttonHTML = `<button class="secondary-btn" disabled style="opacity: 0.5;">Requires: ${prereqProject?.name || '???'}</button>`;
+            } else if (!canAfford) {
+                statusBadge = `<span class="stat-badge warn">💰 Need $${project.cost.toLocaleString()}</span>`;
+                buttonHTML = `<button class="primary-btn" disabled style="opacity: 0.5;">Not Enough Money</button>`;
+            } else if (state.activeResearch) {
+                statusBadge = `<span class="stat-badge blue">⏳ Lab Busy</span>`;
+                buttonHTML = `<button class="secondary-btn" disabled style="opacity: 0.5;">Lab Occupied</button>`;
+            } else {
+                statusBadge = `<span class="stat-badge green">✅ Ready</span>`;
+                buttonHTML = `<button class="primary-btn" onclick="startResearch('${project.id}')">Start Research</button>`;
+            }
+            
+            projectsHTML += `
+                <div class="premium-card" style="${cardStyle}">
+                    <div class="card-header">
+                        <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <span style="font-size: 2rem;">${project.icon}</span>
+                                <h3 style="display: inline; margin-left: 8px;">${project.name}</h3>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                        <div class="subtitle">${project.desc}</div>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
+                            <span class="stat-badge warn">💰 $${project.cost.toLocaleString()}</span>
+                            <span class="stat-badge blue">⏱ ${project.days} days</span>
+                            ${project.requires ? `<span class="stat-badge purple">🔗 Requires: ${data.researchProjects[project.requires]?.name || '???'}</span>` : ''}
+                        </div>
+                        <div style="padding: 10px; background: #0b1220; border-radius: 8px; margin-bottom: 10px;">
+                            <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 6px;">🔓 Unlocks ${project.unlocks.length} animal${project.unlocks.length !== 1 ? 's' : ''}:</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                ${project.unlocks.map(id => {
+                                    const animal = data.animals.find(a => a.id === id);
+                                    if (!animal) return '';
+                                    const unlocked = !animal.researchRequired || isResearchComplete(animal.researchRequired);
+                                    return `<span class="stat-badge ${unlocked ? 'green' : ''}">${unlocked ? '✅' : '🔒'} ${animal.name}</span>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                        ${buttonHTML}
+                    </div>
+                </div>
+            `;
+        });
+    });
+    
+    box.innerHTML = `
+        <div class="premium-card" style="grid-column: 1 / -1; margin-bottom: 10px;">
+            <div class="card-header">
+                <h3>🔬 Research & Development</h3>
+                <div class="subtitle">Unlock new animals and advance your zoo's knowledge</div>
+            </div>
+            <div class="card-body" style="padding: 12px 16px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                    <div style="padding: 10px; background: #0b1220; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Research Done</div>
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">${completedCount}/${totalCount}</div>
+                    </div>
+                    <div style="padding: 10px; background: #0b1220; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Animals Unlocked</div>
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--blue);">${unlockedAnimals}/${totalAnimals}</div>
+                    </div>
+                    <div style="padding: 10px; background: #0b1220; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Total Invested</div>
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--warn);">$${state.completedResearch.reduce((sum, id) => sum + (data.researchProjects[id]?.cost || 0), 0).toLocaleString()}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        ${activeResearchHTML}
+        <div class="grid-layout">
+            ${projectsHTML}
+        </div>
+    `;
+}
+
 function changeLeaderboardCategory(category) {
     leaderboardCategory = category;
     renderLeaderboard();
@@ -3803,6 +4041,7 @@ updateUI();
 renderExhibits();
 checkAchievements();
 renderAchievements();
+loadResearch();
 renderReports();
 renderFacilities();
 renderStaff();
