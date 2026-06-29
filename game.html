@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.4 </title>
+<title>ZooSmith V0.2.5 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -1896,42 +1896,52 @@ function renderSupplies() {
 }
 
 function buyFood(foodType, amount) {
-    const food = FOOD_TYPES[foodType];
-    if (!food) return;
-    
-    const current = state.food[foodType] || 0;
-    const spaceAvailable = food.storageCap - current;
-    
-    if (spaceAvailable <= 0) {
-        showToast(`${food.name} storage is full!`, "error");
-        return;
+    try {
+        const food = FOOD_TYPES[foodType];
+        if (!food) {
+            console.error("Unknown food type:", foodType);
+            return showToast("Unknown food type!", "error");
+        }
+        
+        // Initialize food stock if missing
+        if (!state.food) state.food = { hay: 0, meat: 0, produce: 0 };
+        if (state.food[foodType] === undefined) state.food[foodType] = 0;
+        
+        const current = state.food[foodType];
+        const spaceAvailable = food.storageCap - current;
+        
+        if (spaceAvailable <= 0) {
+            return showToast(`${food.name} storage is full!`, "error");
+        }
+        
+        // Can't buy more than storage allows
+        const actualAmount = Math.min(amount, spaceAvailable);
+        
+        // Bulk discount
+        let unitCost = food.costPerUnit;
+        if (actualAmount >= 100) unitCost = food.costPerUnit * 0.8;
+        else if (actualAmount >= 50) unitCost = food.costPerUnit * 0.9;
+        
+        const totalCost = Math.floor(unitCost * actualAmount);
+        
+        if (state.money < totalCost) {
+            return showToast(`Not enough money! Need $${totalCost}`, "error");
+        }
+        
+        state.money -= totalCost;
+        state.food[foodType] = current + actualAmount;
+        showFloatingMoney(-totalCost);
+        
+        const discountMsg = actualAmount !== amount ? ` (capped at ${actualAmount})` : '';
+        showToast(`Bought ${actualAmount} ${food.name}${discountMsg}`, "info");
+        
+        updateUI();
+        renderSupplies();
+    } catch (e) {
+        console.error("buyFood error:", e);
+        showToast("Error buying food. Check console.", "error");
     }
-    
-    // Can't buy more than storage allows
-    const actualAmount = Math.min(amount, spaceAvailable);
-    
-    // Bulk discount
-    let unitCost = food.costPerUnit;
-    if (actualAmount >= 100) unitCost = food.costPerUnit * 0.8;
-    else if (actualAmount >= 50) unitCost = food.costPerUnit * 0.9;
-    
-    const totalCost = Math.floor(unitCost * actualAmount);
-    
-    if (state.money < totalCost) {
-        showToast(`Not enough money! Need $${totalCost}`, "error");
-        return;
-    }
-    
-    state.money -= totalCost;
-    state.food[foodType] = current + actualAmount;
-    showFloatingMoney(-totalCost);
-    
-    const discountMsg = actualAmount !== amount ? ` (capped at ${actualAmount} due to storage)` : '';
-    showToast(`Bought ${actualAmount} ${food.name}${discountMsg}`, "info");
-    
-    updateUI();
-    renderSupplies();
-}
+} 
   
 function tryBreeding(exhibit) {
     const animals = exhibit.animals;
@@ -2166,7 +2176,8 @@ function advanceDay() {
     renderAchievements();
     renderVisitors();
     submitToLeaderboard();
-    saveGame();
+  renderSupplies();  
+  saveGame();
     triggerRandomEvent();
 }
 
@@ -3464,11 +3475,12 @@ document.getElementById("resetGameBtn").onclick = () => {
         visitorComplaints: [],
         amenities: {},
         visitorSatisfaction: 100,
+        food: { hay: 30, meat: 20, produce: 15 },
         maintenance: { dailyMaintenanceCost: 0 }
     };
 
     ["reports", "exhibits", "shop", "achievements", "staff", "facilities", "visitors", "amenities"].forEach(id => document.getElementById(id).innerHTML = "");
-    updateUI(); renderExhibits(); renderAchievements(); renderReports(); renderShop(); renderFacilities(); renderStaff();
+    updateUI(); renderExhibits(); renderAchievements(); renderReports(); renderShop(); renderFacilities(); renderStaff(); renderSupplies();
     showToast("Zoo has been reset!", "info");
 };
 
