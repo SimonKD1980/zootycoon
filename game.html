@@ -1260,6 +1260,18 @@ button:disabled {
         <button onclick="closeBuildModal()" class="removeBtn" style="margin-top: 10px;">Cancel</button>
     </div>
 </div>
+
+<div id="eventModal" class="modal">
+    <div class="modal-content" id="eventModalContent" style="max-width: 500px; border: 2px solid var(--warn);">
+        <div style="text-align: center; margin-bottom: 15px;">
+            <span id="eventIcon" style="font-size: 4rem; display: block; margin-bottom: 10px;">📢</span>
+            <h2 id="eventName" style="color: var(--warn); margin: 0;">Event Name</h2>
+        </div>
+        <p id="eventDesc" style="color: var(--muted); text-align: center; margin-bottom: 20px; font-size: 1.1rem;">Description goes here.</p>
+        <div id="eventChoices" style="display: flex; flex-direction: column; gap: 10px;"></div>
+    </div>
+</div>
+  
 <div id="upgradeModal" class="modal">
     <div class="modal-content">
         <h3>🏗 Select Upgrade</h3>
@@ -1858,7 +1870,13 @@ for (const id in state.exhibits) {
 }
 
 function advanceDay() {
-    const startMoney = state.money;
+      // Prevent spamming next day if an event is pending
+    if (state.activeEvent) {
+        showToast("Resolve the current event before ending the day!", "warn");
+        return;
+    }  
+  
+  const startMoney = state.money;
     
     processDayIncome();
     processUpkeep();
@@ -2884,6 +2902,165 @@ function cancelMove() {
     renderExhibits();
 }
 
+/* =========================================
+   RANDOM EVENTS SYSTEM
+   ========================================= */
+
+const RANDOM_EVENTS = [
+    {
+        id: 'donation',
+        name: 'Generous Donation',
+        desc: 'A philanthropist is impressed by your zoo and sends a check!',
+        icon: '💰',
+        choices: [
+            { text: 'Accept ($1000)', effect: () => { state.money += 1000; showFloatingMoney(1000); showToast("Received donation!", "info"); }, cost: 0 }
+        ]
+    },
+    {
+        id: 'escape',
+        name: 'Animal Escape!',
+        desc: 'A mischievous animal has breached the fence! Visitors are panicking.',
+        icon: '🐒',
+        condition: () => getAllAnimals().length > 0,
+        choices: [
+            { text: 'Security Team ($500)', effect: () => { 
+                state.money -= 500; showFloatingMoney(-500); 
+                showToast("Animal safely recaptured.", "info"); 
+            }, cost: 500 },
+            { text: 'Ignore It', effect: () => { 
+                state.visitorSatisfaction = Math.max(0, state.visitorSatisfaction - 20); 
+                showToast("Chaos! Visitor satisfaction dropped.", "error"); 
+            }, cost: 0 }
+        ]
+    },
+    {
+        id: 'inspection',
+        name: 'Health Inspection',
+        desc: 'A strict inspector is visiting today. Your facilities look a bit messy.',
+        icon: '📋',
+        condition: () => state.money > 200,
+        choices: [
+            { text: 'Emergency Cleanup ($200)', effect: () => { 
+                state.money -= 200; showFloatingMoney(-200); 
+                showToast("Inspector passed the zoo with flying colors.", "info"); 
+                state.visitorSatisfaction += 5;
+            }, cost: 200 },
+            { text: 'Risk It', effect: () => { 
+                if (Math.random() > 0.5) {
+                    showToast("Fine! The inspector found no issues.", "info");
+                    state.visitorSatisfaction += 5;
+                } else {
+                    state.visitorSatisfaction -= 15;
+                    showToast("Failed inspection! Visitors are worried.", "error");
+                }
+            }, cost: 0 }
+        ]
+    },
+    {
+        id: 'viral',
+        name: 'Viral Video!',
+        desc: 'A visitor\'s TikTok of your zoo went viral! People are rushing in.',
+        icon: '📱',
+        choices: [
+            { text: 'Capitalize (+50 visitors today)', effect: () => { 
+                state.dailyVisitors += 50; 
+                updateUI(); 
+                showToast("Traffic surged! Check the Reports tab.", "info");
+            }, cost: 0 }
+        ]
+    },
+    {
+        id: 'sickness',
+        name: 'Flu Outbreak',
+        desc: 'A mild flu is spreading among the animals. You need medicine.',
+        icon: '💊',
+        condition: () => getAllAnimals().length > 2,
+        choices: [
+            { text: 'Treat All ($300)', effect: () => { 
+                state.money -= 300; showFloatingMoney(-300); 
+                showToast("Animals are healthy again.", "info"); 
+            }, cost: 300 },
+            { text: 'Do Nothing', effect: () => { 
+                // Randomly lower happiness of some animals
+                let affected = 0;
+                for (const id in state.exhibits) {
+                    for (const animal of state.exhibits[id].animals) {
+                        if (Math.random() > 0.7) {
+                            animal.sick = true; // Mark as sick for now
+                            affected++;
+                        }
+                    }
+                }
+                showToast(`${affected} animals caught the flu. Happiness dropping.`, "error");
+            }, cost: 0 }
+        ]
+    }
+];
+
+let currentEvent = null;
+
+function triggerRandomEvent() {
+    // 30% chance of an event each day
+    if (Math.random() > 0.30) return;
+
+    // Filter available events
+    const available = RANDOM_EVENTS.filter(e => !e.condition || e.condition());
+    if (available.length === 0) return;
+
+    // Pick random event
+    const event = available[Math.floor(Math.random() * available.length)];
+    
+    state.activeEvent = event;
+    showEventModal(event);
+}
+
+function showEventModal(event) {
+    currentEvent = event;
+    const modal = document.getElementById('eventModal');
+    
+    document.getElementById('eventIcon').textContent = event.icon;
+    document.getElementById('eventName').textContent = event.name;
+    document.getElementById('eventDesc').textContent = event.desc;
+    
+    const choicesDiv = document.getElementById('eventChoices');
+    choicesDiv.innerHTML = '';
+
+    event.choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = choice.cost > state.money ? 'secondary-btn' : 'primary-btn';
+        btn.style.opacity = choice.cost > state.money ? '0.5' : '1';
+        btn.style.cursor = choice.cost > state.money ? 'not-allowed' : 'pointer';
+        btn.textContent = choice.text;
+        
+        btn.onclick = () => {
+            if (choice.cost > state.money) {
+                showToast("Not enough money for this option!", "error");
+                return;
+            }
+            
+            choice.effect();
+            updateUI();
+            renderExhibits(); // Re-render in case happiness changed
+            
+            // Close modal and reset
+            modal.classList.remove('active');
+            state.activeEvent = null;
+            currentEvent = null;
+            saveGame();
+        };
+        
+        choicesDiv.appendChild(btn);
+    });
+
+    modal.classList.add('active');
+}
+
+function closeEventModal() {
+    document.getElementById('eventModal').classList.remove('active');
+    state.activeEvent = null;
+    currentEvent = null;
+}
+  
 /* =========================================
    7. EVENT LISTENERS
    ========================================= */
