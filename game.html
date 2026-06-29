@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.3 </title>
+<title>ZooSmith V0.2.4 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -1210,6 +1210,7 @@ button:disabled {
     <button class="active" onclick="showSection('shop', event)">🛒 Shop</button>
     <button onclick="showSection('exhibits', event)">🏞 Exhibits</button>
     <button onclick="showSection('visitors', event)">👥 Visitors</button>
+  <button onclick="showSection('supplies', event)">🍽 Supplies</button>
     <button onclick="showSection('achievements', event)">🏆 Achievements</button>
     <button onclick="showSection('reports', event)">📊 Reports</button>
     <button onclick="showSection('amenities', event)">🏪 Amenities</button>
@@ -1228,6 +1229,7 @@ button:disabled {
 <div id="shop" class="section active"></div>
 <div id="exhibits" class="section"></div>
 <div id="visitors" class="section"></div>
+<div id="supplies" class="section"></div>  
 <div id="amenities" class="section"></div>
 <div id="achievements" class="section"></div>
 <div id="reports" class="section"></div>
@@ -1298,9 +1300,23 @@ const SIZE_RANK = { small: 1, medium: 2, large: 3 };
 function exhibitSizeOk(exhibitSize, requiredSize) {
     return SIZE_RANK[exhibitSize] >= SIZE_RANK[requiredSize];
 }
+
+const FOOD_TYPES = {
+    hay:     { name: "Hay",     icon: "🌾", costPerUnit: 2, diet: "Herbivore", storageCap: 200, color: "#fbbf24" },
+    meat:    { name: "Meat",    icon: "🥩", costPerUnit: 5, diet: "Carnivore", storageCap: 100, color: "#ef4444" },
+    produce: { name: "Produce", icon: "🥬", costPerUnit: 3, diet: "Omnivore",  storageCap: 150, color: "#22c55e" }
+};
+
+function getDietFoodType(diet) {
+    if (diet === "Herbivore") return "hay";
+    if (diet === "Carnivore") return "meat";
+    if (diet === "Omnivore") return "produce";
+    return "hay";
+}
   
 let state = {
     money: 10000,
+    food: { hay: 30, meat: 20, produce: 15 },  // NEW: starting supplies
     day: 1,
     month: 1,
     year: 1,
@@ -1704,24 +1720,219 @@ function processDayIncome() {
 function processUpkeep() {
     let totalCost = 0;
     for (const id in state.exhibits) {
-        const exhibit = state.exhibits[id];
-        
-        // $5 base exhibit maintenance
+        // $5 base exhibit maintenance (cleaning, electricity, etc.)
         totalCost += 5;
-        
-        // Food cost per animal (with pregnancy premium)
-        for (const animal of exhibit.animals) {
-            let cost = animal.foodCost || 2;
-            if (animal.isPregnant) {
-                cost = Math.ceil(cost * 1.5);  // +50% for pregnancy
-            }
-            totalCost += cost;
-        }
     }
     state.money -= totalCost;
-    addTicker(`🧾 Upkeep paid: -$${totalCost.toFixed(0)}`);
+    if (totalCost > 0) {
+        addTicker(`🧾 Facility upkeep: -$${totalCost}`);
+    }
 }
 
+function consumeDailyFood() {
+    const consumption = { hay: 0, meat: 0, produce: 0 };
+    const hungryAnimals = [];
+    
+    // Calculate what we need
+    for (const id in state.exhibits) {
+        for (const animal of state.exhibits[id].animals) {
+            const foodType = getDietFoodType(animal.diet);
+            const units = animal.isPregnant ? 2 : 1;
+            consumption[foodType] += units;
+        }
+    }
+    
+    // Try to feed everyone
+    for (const foodType in consumption) {
+        const needed = consumption[foodType];
+        const available = state.food[foodType] || 0;
+        
+        if (available >= needed) {
+            state.food[foodType] -= needed;
+        } else {
+            // Not enough food - animals go hungry
+            const shortage = needed - available;
+            state.food[foodType] = 0;
+            
+            // Find hungry animals and reduce happiness
+            let hungryCount = 0;
+            for (const id in state.exhibits) {
+                for (const animal of state.exhibits[id].animals) {
+                    if (getDietFoodType(animal.diet) === foodType) {
+                        hungryCount++;
+                        // Will apply happiness penalty via a flag
+                        animal.wasHungry = true;
+                    }
+                }
+            }
+            
+            if (hungryCount > 0) {
+                hungryAnimals.push(`${FOOD_TYPES[foodType].icon} ${hungryCount} animals hungry!`);
+            }
+        }
+    }
+    
+    // Apply happiness penalty for hungry animals
+    for (const id in state.exhibits) {
+        for (const animal of state.exhibits[id].animals) {
+            if (animal.wasHungry) {
+                // Penalty handled in getExhibitHappiness (we'll add this)
+                delete animal.wasHungry;
+            }
+        }
+    }
+    
+    if (hungryAnimals.length > 0) {
+        addTicker(`⚠️ ${hungryAnimals.join(', ')}`);
+        showToast("Animals are hungry! Buy more food!", "error");
+    }
+    
+    return consumption;
+}
+
+function renderSupplies() {
+    const box = document.getElementById("supplies");
+    const consumption = { hay: 0, meat: 0, produce: 0 };
+    
+    // Calculate daily consumption
+    for (const id in state.exhibits) {
+        for (const animal of state.exhibits[id].animals) {
+            const foodType = getDietFoodType(animal.diet);
+            consumption[foodType] += animal.isPregnant ? 2 : 1;
+        }
+    }
+    
+    // Count animals by diet
+    const animalCounts = { hay: 0, meat: 0, produce: 0 };
+    for (const id in state.exhibits) {
+        for (const animal of state.exhibits[id].animals) {
+            animalCounts[getDietFoodType(animal.diet)]++;
+        }
+    }
+    
+    let cardsHTML = '';
+    for (const foodType in FOOD_TYPES) {
+        const food = FOOD_TYPES[foodType];
+        const current = state.food[foodType] || 0;
+        const cap = food.storageCap;
+        const percent = Math.min(100, (current / cap) * 100);
+        const dailyUse = consumption[foodType];
+        const daysLeft = dailyUse > 0 ? Math.floor(current / dailyUse) : '∞';
+        const isLow = current < dailyUse * 3;
+        const isEmpty = current === 0 && dailyUse > 0;
+        
+        cardsHTML += `
+            <div class="premium-card" style="${isEmpty ? 'border-color: var(--danger); box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);' : isLow ? 'border-color: var(--warn);' : ''}">
+                <div class="card-header" style="background: linear-gradient(135deg, ${food.color}22, #0f172a);">
+                    <span style="font-size: 2.5rem;">${food.icon}</span>
+                    <h3>${food.name}</h3>
+                    <div class="subtitle">For ${food.diet}s • $${food.costPerUnit}/unit</div>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                        <div>
+                            <div style="font-size: 2rem; font-weight: 900; color: ${isEmpty ? 'var(--danger)' : isLow ? 'var(--warn)' : 'var(--accent)'};">
+                                ${current}
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--muted);">/ ${cap} units</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.85rem; color: var(--muted);">Days left:</div>
+                            <div style="font-size: 1.3rem; font-weight: 800; color: ${daysLeft < 3 && daysLeft !== '∞' ? 'var(--warn)' : 'var(--text)'};">
+                                ${daysLeft}${daysLeft !== '∞' ? ' days' : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="happiness-bar" style="height: 10px;">
+                        <div style="height: 100%; width: ${percent}%; background: linear-gradient(90deg, ${food.color}, ${food.color}cc); transition: width 0.3s;"></div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); margin-top: 8px;">
+                        <span>📊 ${dailyUse}/day</span>
+                        <span>🐾 ${animalCounts[foodType]} animals</span>
+                    </div>
+                    
+                    ${isEmpty ? `
+                        <div style="padding: 8px; background: rgba(239, 68, 68, 0.15); border-radius: 8px; text-align: center; color: var(--danger); font-weight: 700; margin: 8px 0;">
+                            ⚠️ OUT OF STOCK - Animals are hungry!
+                        </div>
+                    ` : isLow ? `
+                        <div style="padding: 8px; background: rgba(245, 158, 11, 0.15); border-radius: 8px; text-align: center; color: var(--warn); font-weight: 700; margin: 8px 0;">
+                            ⚠️ LOW STOCK - Restock soon!
+                        </div>
+                    ` : ''}
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px;">
+                        <button class="secondary-btn" style="padding: 8px; font-size: 0.85rem;" onclick="buyFood('${foodType}', 10)">
+                            +10<br><small>$${food.costPerUnit * 10}</small>
+                        </button>
+                        <button class="secondary-btn" style="padding: 8px; font-size: 0.85rem;" onclick="buyFood('${foodType}', 25)">
+                            +25<br><small>$${food.costPerUnit * 25}</small>
+                        </button>
+                        <button class="secondary-btn" style="padding: 8px; font-size: 0.85rem;" onclick="buyFood('${foodType}', 50)">
+                            +50<br><small>$${Math.floor(food.costPerUnit * 50 * 0.9)}</small>
+                        </button>
+                        <button class="primary-btn" style="padding: 8px; font-size: 0.85rem;" onclick="buyFood('${foodType}', 100)">
+                            +100<br><small>$${Math.floor(food.costPerUnit * 100 * 0.8)} (20% off)</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    box.innerHTML = `
+        <div class="premium-card" style="grid-column: 1 / -1; margin-bottom: 10px;">
+            <div class="card-header">
+                <h3>🍽 Food Supply Management</h3>
+                <div class="subtitle">Buy food to keep your animals fed. Pregnant animals eat double!</div>
+            </div>
+        </div>
+        <div class="grid-layout">
+            ${cardsHTML}
+        </div>
+    `;
+}
+
+function buyFood(foodType, amount) {
+    const food = FOOD_TYPES[foodType];
+    if (!food) return;
+    
+    const current = state.food[foodType] || 0;
+    const spaceAvailable = food.storageCap - current;
+    
+    if (spaceAvailable <= 0) {
+        showToast(`${food.name} storage is full!`, "error");
+        return;
+    }
+    
+    // Can't buy more than storage allows
+    const actualAmount = Math.min(amount, spaceAvailable);
+    
+    // Bulk discount
+    let unitCost = food.costPerUnit;
+    if (actualAmount >= 100) unitCost = food.costPerUnit * 0.8;
+    else if (actualAmount >= 50) unitCost = food.costPerUnit * 0.9;
+    
+    const totalCost = Math.floor(unitCost * actualAmount);
+    
+    if (state.money < totalCost) {
+        showToast(`Not enough money! Need $${totalCost}`, "error");
+        return;
+    }
+    
+    state.money -= totalCost;
+    state.food[foodType] = current + actualAmount;
+    showFloatingMoney(-totalCost);
+    
+    const discountMsg = actualAmount !== amount ? ` (capped at ${actualAmount} due to storage)` : '';
+    showToast(`Bought ${actualAmount} ${food.name}${discountMsg}`, "info");
+    
+    updateUI();
+    renderSupplies();
+}
+  
 function tryBreeding(exhibit) {
     const animals = exhibit.animals;
     if (!animals || animals.length < 2) return;
@@ -1786,7 +1997,11 @@ function tryBreeding(exhibit) {
           toArray(animal.dislikedShelter).forEach(pref => { if (upgrades.includes(pref)) happiness -= 15; });
           toArray(animal.dislikedDecorations).forEach(pref => { if (upgrades.includes(pref)) happiness -= 10; });
           toArray(animal.dislikedFacilities).forEach(pref => { if (upgrades.includes(pref)) happiness -= 10; });
-
+    if (animal.wasHungry) {
+        happiness -= 30;
+    }
+    
+    total += happiness;
         total += happiness;
     });
 
@@ -1884,7 +2099,8 @@ function advanceDay() {
     processDayIncome();
     processUpkeep();
     processDailyMaintenance();  
-
+    consumeDailyFood(); 
+    
     const delta = state.money - startMoney;
     if (delta !== 0) showFloatingMoney(delta);
 
@@ -1910,6 +2126,7 @@ function advanceDay() {
                         ageDays: 0,
                         dailyIncome: animal.dailyIncome,
                         foodCost: animal.foodCost,
+                        diet: animalData.diet, 
                         variation: null,
                         compatibleWith: animal.compatibleWith,
                         minInExhibit: animal.minInExhibit,
@@ -1980,6 +2197,7 @@ function showSection(section, event) {
     if (section === "visitors") renderVisitors();
     if (section === "amenities") renderAmenities();
     if (section === "leaderboard") renderLeaderboard();
+  if (section === "supplies") renderSupplies();
 }
 
 let currentCategory = 'all';
@@ -2717,6 +2935,7 @@ document.getElementById("confirmBuyBtn").onclick = () => {
         dailyIncome: animal.dailyIncome,
         variation: pickVariation(animal),
         foodCost: animal.foodCost, 
+        diet: animal.diet, 
         compatibleWith: animal.compatibleWith,
         minInExhibit: animal.minInExhibit,
         maxInExhibit: animal.maxInExhibit,
@@ -3561,6 +3780,7 @@ function escapeHtml(text) {
 
 // Initialize - added loadAchievements()
 loadGame();
+state.food ??= { hay: 30, meat: 20, produce: 15 };
 loadShop();
 loadUpgrades();
 loadFacilities();
