@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.18 </title>
+<title>ZooSmith V0.2.19 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -2428,9 +2428,6 @@ function filterByCategory(category) {
 
 function renderShopGrid() {
     const grid = document.getElementById('shopGrid');
-
-  const slotCost = getAnimalSlotCost(animal);
-const slotColor = slotCost >= 3 ? 'danger' : slotCost >= 2 ? 'warn' : 'blue';
   
     if (!grid) return;
     
@@ -2456,6 +2453,8 @@ const slotColor = slotCost >= 3 ? 'danger' : slotCost >= 2 ? 'warn' : 'blue';
     grid.innerHTML = '';
     
     filtered.forEach(animal => {
+        const slotCost = getAnimalSlotCost(animal);
+        const slotColor = slotCost >= 3 ? 'danger' : slotCost >= 2 ? 'warn' : 'blue';
         const dietEmoji = animal.diet === 'Carnivore' ? '🥩' : animal.diet === 'Herbivore' ? '🌿' : '🍖';
         const statusEmoji = animal.conservationStatus === 'Endangered' ? '🔴' : 
                             animal.conservationStatus === 'Vulnerable' ? '🟡' : 
