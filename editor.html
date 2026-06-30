@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ZooSmith JSON Editor</title>
+<style>
+:root {
+    --bg: #0f172a;
+    --panel: #111827;
+    --card: #1f2937;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --accent: #22c55e;
+    --danger: #ef4444;
+    --warn: #f59e0b;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+header {
+    background: var(--panel);
+    padding: 12px 20px;
+    border-bottom: 1px solid #243042;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+header h1 { margin: 0; font-size: 1.3rem; }
+.header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+    transition: 0.2s;
+}
+button:hover { transform: translateY(-1px); opacity: 0.9; }
+button.secondary { background: var(--blue); color: white; }
+button.danger { background: var(--danger); color: white; }
+button.ghost { background: transparent; color: var(--text); border: 1px solid #243042; }
+input[type="file"] { display: none; }
+.tabs {
+    background: var(--panel);
+    display: flex;
+    gap: 4px;
+    padding: 8px 20px;
+    border-bottom: 1px solid #243042;
+    overflow-x: auto;
+}
+.tab {
+    padding: 8px 16px;
+    background: var(--card);
+    border: 1px solid #243042;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+    white-space: nowrap;
+}
+.tab.active { background: var(--accent); color: #000; font-weight: 700; border-color: var(--accent); }
+.main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    overflow: hidden;
+}
+.sidebar {
+    background: var(--panel);
+    border-right: 1px solid #243042;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.sidebar-header {
+    padding: 12px;
+    border-bottom: 1px solid #243042;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.sidebar-header input {
+    flex: 1;
+    padding: 8px;
+    background: var(--card);
+    border: 1px solid #243042;
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+}
+.item-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+.item {
+    padding: 10px 12px;
+    background: var(--card);
+    border: 1px solid #243042;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: 0.15s;
+}
+.item:hover { border-color: var(--accent); transform: translateX(2px); }
+.item.active { border-color: var(--accent); background: rgba(34, 197, 94, 0.15); }
+.item-name { font-weight: 700; font-size: 14px; }
+.item-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.editor {
+    overflow-y: auto;
+    padding: 20px;
+}
+.editor-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+}
+.editor-empty .icon { font-size: 4rem; margin-bottom: 10px; }
+.form-section {
+    background: var(--panel);
+    border: 1px solid #243042;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.form-section h3 {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+    color: var(--accent);
+    border-bottom: 1px solid #243042;
+    padding-bottom: 8px;
+}
+.form-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: start;
+}
+.form-row label {
+    font-size: 13px;
+    color: var(--muted);
+    padding-top: 8px;
+    font-weight: 600;
+}
+input[type="text"], input[type="number"], textarea, select {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--card);
+    border: 1px solid #243042;
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+}
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+textarea { min-height: 60px; resize: vertical; font-family: monospace; font-size: 12px; }
+.help { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.array-editor {
+    background: var(--card);
+    border: 1px solid #243042;
+    border-radius: 6px;
+    padding: 8px;
+}
+.array-item {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+    align-items: center;
+}
+.array-item input { flex: 1; }
+.array-item button { padding: 4px 8px; font-size: 12px; }
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px;
+    background: var(--card);
+    border: 1px solid #243042;
+    border-radius: 6px;
+    min-height: 36px;
+}
+.tag {
+    background: var(--accent);
+    color: #000;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.tag .x { cursor: pointer; font-weight: 900; }
+.tag-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 3px !important;
+    flex: 1;
+    min-width: 80px;
+}
+.editor-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #243042;
+}
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--card);
+    border-left: 4px solid var(--accent);
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    animation: slideIn 0.3s ease;
+    z-index: 1000;
+}
+.toast.error { border-left-color: var(--danger); }
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+.variations-editor {
+    background: var(--card);
+    border: 1px solid #243042;
+    border-radius: 6px;
+    padding: 10px;
+}
+.variation-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 60px 40px;
+    gap: 6px;
+    margin-bottom: 6px;
+    align-items: center;
+}
+.variation-row label { font-size: 11px; color: var(--muted); }
+.checkbox-row { display: flex; align-items: center; gap: 8px; padding-top: 8px; }
+.checkbox-row input { width: auto; }
+.count-badge {
+    background: var(--accent);
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-left: 6px;
+}
+@media (max-width: 800px) {
+    .main { grid-template-columns: 1fr; }
+    .sidebar { max-height: 40vh; }
+}
+</style>
+</head>
+<body>
+
+<header>
+    <h1>🦁 ZooSmith JSON Editor</h1>
+    <div class="header-actions">
+        <label for="fileInput" class="ghost" style="padding:8px 14px; border-radius:8px; cursor:pointer; border:1px solid #243042; display:inline-block;">
+            📂 Load JSON File
+        </label>
+        <input type="file" id="fileInput" accept=".json">
+        <button id="downloadBtn" class="secondary">💾 Download JSON</button>
+        <button id="newItemBtn">➕ New Item</button>
+    </div>
+</header>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="main">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <input type="text" id="searchBox" placeholder="🔍 Search...">
+        </div>
+        <div class="item-list" id="itemList"></div>
+    </aside>
+    <main class="editor" id="editor">
+        <div class="editor-empty">
+            <div class="icon">📋</div>
+            <h2>Load a JSON file to start editing</h2>
+            <p>Click "Load JSON File" in the top right to begin</p>
+        </div>
+    </main>
+</div>
+
+<script>
+const FILE_TYPES = {
+    animals: {
+        label: '🐾 Animals',
+        isArray: true,
+        nameField: 'name',
+        idField: 'id',
+        meta: (a) => `${a.category || 'No cat'} • ${a.diet || '?'} • $${a.cost || 0}`,
+        sections: [
+            { title: 'Basic Info', fields: [
+                { key: 'id', label: 'ID', type: 'text', help: 'Unique identifier (snake_case)' },
+                { key: 'name', label: 'Name', type: 'text' },
+                { key: 'scienceName', label: 'Scientific Name', type: 'text' },
+                { key: 'category', label: 'Category', type: 'text', help: 'e.g. Mammal, Bird, Reptile' },
+                { key: 'info', label: 'Description', type: 'textarea' },
+                { key: 'image', label: 'Image URL', type: 'text' }
+            ]},
+            { title: 'Stats & Economy', fields: [
+                { key: 'cost', label: 'Purchase Cost', type: 'number' },
+                { key: 'dailyIncome', label: 'Daily Income', type: 'number' },
+                { key: 'foodCost', label: 'Daily Food Cost', type: 'number' },
+                { key: 'attractionValue', label: 'Attraction Value', type: 'number' }
+            ]},
+            { title: 'Biology', fields: [
+                { key: 'diet', label: 'Diet', type: 'select', options: ['Herbivore', 'Carnivore', 'Omnivore'] },
+                { key: 'habitat', label: 'Habitat', type: 'text' },
+                { key: 'conservationStatus', label: 'Conservation', type: 'select', options: ['Least Concern', 'Vulnerable', 'Endangered', 'Critically Endangered'] },
+                { key: 'requiredExhibitSize', label: 'Exhibit Size', type: 'select', options: ['small', 'medium', 'large'] },
+                { key: 'gestationDays', label: 'Gestation Days', type: 'number' },
+                { key: 'breedChance', label: 'Breed Chance', type: 'number', help: '0.0 to 1.0 (e.g. 0.1 = 10%)' }
+            ]},
+            { title: 'Exhibit Requirements', fields: [
+                { key: 'minInExhibit', label: 'Min In Exhibit', type: 'number' },
+                { key: 'maxInExhibit', label: 'Max In Exhibit', type: 'number' },
+                { key: 'compatibleWith', label: 'Compatible With', type: 'tags', help: 'IDs of compatible animals' },
+                { key: 'researchRequired', label: 'Research Required', type: 'text', help: 'Research project ID or null' }
+            ]},
+            { title: 'Preferences (arrays of upgrade IDs)', fields: [
+                { key: 'preferredShelter', label: 'Preferred Shelter', type: 'tags' },
+                { key: 'preferredDecorations', label: 'Preferred Decor', type: 'tags' },
+                { key: 'preferredFacilities', label: 'Preferred Facilities', type: 'tags' },
+                { key: 'dislikedShelter', label: 'Disliked Shelter', type: 'tags' },
+                { key: 'dislikedDecorations', label: 'Disliked Decor', type: 'tags' },
+                { key: 'dislikedFacilities', label: 'Disliked Facilities', type: 'tags' }
+            ]},
+            { title: 'Variations (rare color morphs)', fields: [
+                { key: 'variations', label: 'Variations', type: 'variations' }
+            ]}
+        ]
+    },
+    research: {
+        label: '🔬 Research',
+        isArray: true,
+        nameField: 'name',
+        idField: 'id',
+        meta: (r) => `${r.tier} • $${r.cost} • ${r.days}d`,
+        sections: [
+            { title: 'Basic Info', fields: [
+                { key: 'id', label: 'ID', type: 'text' },
+                { key: 'name', label: 'Name', type: 'text' },
+                { key: 'desc', label: 'Description', type: 'textarea' },
+                { key: 'icon', label: 'Icon (emoji)', type: 'text' }
+            ]},
+            { title: 'Requirements', fields: [
+                { key: 'cost', label: 'Cost', type: 'number' },
+                { key: 'days', label: 'Days to Complete', type: 'number' },
+                { key: 'tier', label: 'Tier', type: 'select', options: ['basic', 'advanced', 'exotic', 'legendary'] },
+                { key: 'requires', label: 'Prerequisite', type: 'text', help: 'ID of required research or null' }
+            ]},
+            { title: 'Rewards', fields: [
+                { key: 'unlocks', label: 'Unlocks Animal IDs', type: 'tags' }
+            ]}
+        ]
+    },
+    staff: {
+        label: '👷 Staff',
+        isArray: true,
+        nameField: 'name',
+        idField: 'id',
+        meta: (s) => `${s.role || '?'} • $${s.salary || 0}/day`,
+        sections: [
+            { title: 'Basic Info', fields: [
+                { key: 'id', label: 'ID', type: 'text' },
+                { key: 'name', label: 'Name', type: 'text' },
+                { key: 'role', label: 'Role', type: 'text' },
+                { key: 'icon', label: 'Icon (emoji)', type: 'text' },
+                { key: 'description', label: 'Description', type: 'textarea' }
+            ]},
+            { title: 'Costs', fields: [
+                { key: 'cost', label: 'Hire Cost', type: 'number' },
+                { key: 'salary', label: 'Daily Salary', type: 'number' },
+                { key: 'keeperSlots', label: 'Keeper Slots', type: 'number', help: 'How many animals this staff can care for' }
+            ]},
+            { title: 'Effects (bonuses)', fields: [
+                { key: 'effects.visitorHappiness', label: 'Visitor Happiness', type: 'number' },
+                { key: 'effects.animalHappiness', label: 'Animal Happiness', type: 'number' },
+                { key: 'effects.breedingBonus', label: 'Breeding Bonus', type: 'number', help: 'Decimal (0.1 = +10%)' },
+                { key: 'effects.cleanPark', label: 'Park Cleanliness', type: 'number' },
+                { key: 'effects.cleanExhibits', label: 'Exhibit Cleanliness', type: 'number' },
+                { key: 'effects.maxStaff', label: 'Max Hired', type: 'number' }
+            ]}
+        ]
+    },
+    upgrades: {
+        label: '🏗 Upgrades',
+        isArray: true,
+        nameField: 'name',
+        idField: 'id',
+        meta: (u) => `$${u.cost || 0}`,
+        sections: [
+            { title: 'Upgrade Info', fields: [
+                { key: 'id', label: 'ID', type: 'text' },
+                { key: 'name', label: 'Name', type: 'text' },
+                { key: 'cost', label: 'Cost', type: 'number' },
+                { key: 'description', label: 'Description', type: 'textarea' }
+            ]}
+        ]
+    },
+    facilities: {
+        label: '🏢 Facilities',
+        isArray: true,
+        nameField: 'name',
+        idField: 'id',
+        meta: (f) => `$${f.cost || 0}`,
+        sections: [
+            { title: 'Facility Info', fields: [
+                { key: 'id', label: 'ID', type: 'text' },
+                { key: 'name', label: 'Name', type: 'text' },
+                { key: 'icon', label: 'Icon (emoji)', type: 'text' },
+                { key: 'cost', label: 'Cost', type: 'number' },
+                { key: 'description', label: 'Description', type: 'textarea' }
+            ]}
+        ]
+    },
+    amenities: {
+        label: '🏪 Amenities',
+        isArray: true,
+        nameField: 'name',
+        idField: 'id',
+        meta: (a) => `$${a.cost || 0} • cap ${a.capacity || 0}`,
+        sections: [
+            { title: 'Basic Info', fields: [
+                { key: 'id', label: 'ID', type: 'text' },
+                { key: 'name', label: 'Name', type: 'text' },
+                { key: 'icon', label: 'Icon (emoji)', type: 'text' },
+                { key: 'description', label: 'Description', type: 'textarea' },
+                { key: 'cost', label: 'Purchase Cost', type: 'number' }
+            ]},
+            { title: 'Operations', fields: [
+                { key: 'capacity', label: 'Capacity', type: 'number', help: 'For benches, restrooms, etc.' },
+                { key: 'maxCustomers', label: 'Max Customers/Day', type: 'number' },
+                { key: 'revenue', label: 'Revenue per Visitor', type: 'number' },
+                { key: 'maintenanceCost', label: 'Daily Maintenance', type: 'number' }
+            ]}
+        ]
+    },
+    achievements: {
+        label: '🏆 Achievements',
+        isArray: true,
+        nameField: 'name',
+        idField: 'id',
+        meta: (a) => a.check ? `${a.check.type}: ${a.check.value}` : 'No check',
+        sections: [
+            { title: 'Basic Info', fields: [
+                { key: 'id', label: 'ID', type: 'text' },
+                { key: 'name', label: 'Name', type: 'text' },
+                { key: 'desc', label: 'Description', type: 'textarea' },
+                { key: 'icon', label: 'Icon (emoji)', type: 'text' }
+            ]},
+            { title: 'Unlock Condition', fields: [
+                { key: 'check.type', label: 'Check Type', type: 'select', options: ['totalAnimals', 'speciesCount', 'money', 'exhibitsCount', 'totalUpgrades', 'maxHappiness', 'totalDays', 'bredAnimals', 'animalsSold', 'totalAmenities', 'visitorSatisfaction', 'hasRareVariant', 'speciesCollection'] },
+                { key: 'check.value', label: 'Target Value', type: 'number', help: 'Numeric threshold (or % for speciesCollection)' }
+            ]}
+        ]
+    }
+};
+
+let currentFileType = null;
+let currentData = null;
+let currentFileName = null;
+let currentItemId = null;
+
+const $ = (id) => document.getElementById(id);
+
+// Build tabs
+const tabsEl = $('tabs');
+Object.entries(FILE_TYPES).forEach(([key, config]) => {
+    const tab = document.createElement('div');
+    tab.className = 'tab';
+    tab.dataset.type = key;
+    tab.textContent = config.label;
+    tab.onclick = () => selectFileType(key);
+    tabsEl.appendChild(tab);
+});
+
+function selectFileType(type) {
+    currentFileType = type;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.type === type));
+    renderList();
+    $('editor').innerHTML = `<div class="editor-empty"><div class="icon">👈</div><h2>Select an item from the list</h2><p>Or click "New Item" to create one</p></div>`;
+    currentItemId = null;
+}
+
+// File loading
+$('fileInput').onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    currentFileName = file.name.replace('.json', '');
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+        try {
+            const data = JSON.parse(evt.target.result);
+            // Auto-detect file type
+            let detectedType = currentFileName;
+            if (!FILE_TYPES[detectedType]) {
+                // Try to guess from content
+                const sample = Array.isArray(data) ? data[0] : Object.values(data)[0];
+                if (sample?.gestationDays !== undefined) detectedType = 'animals';
+                else if (sample?.tier !== undefined) detectedType = 'research';
+                else if (sample?.salary !== undefined) detectedType = 'staff';
+                else if (sample?.capacity !== undefined) detectedType = 'amenities';
+                else if (sample?.check !== undefined) detectedType = 'achievements';
+                else if (currentFileName.includes('upgrade')) detectedType = 'upgrades';
+                else if (currentFileName.includes('facilit')) detectedType = 'facilities';
+            }
+            
+            if (!FILE_TYPES[detectedType]) {
+                showToast(`Couldn't detect file type for "${file.name}". Select a type tab first, then load.`, 'error');
+                return;
+            }
+            
+            currentData = Array.isArray(data) ? data : Object.values(data);
+            currentFileType = detectedType;
+            selectFileType(detectedType);
+            showToast(`Loaded ${currentData.length} items from ${file.name}`);
+        } catch (err) {
+            showToast('Invalid JSON file: ' + err.message, 'error');
+        }
+    };
+    reader.readAsText(file);
+};
+
+function renderList() {
+    const list = $('itemList');
+    const search = $('searchBox').value.toLowerCase();
+    if (!currentData) {
+        list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">No file loaded</div>';
+        return;
+    }
+    const config = FILE_TYPES[currentFileType];
+    const filtered = currentData.filter(item => {
+        if (!search) return true;
+        return (item[config.nameField] || '').toLowerCase().includes(search) ||
+               (item[config.idField] || '').toLowerCase().includes(search);
+    });
+    list.innerHTML = '';
+    if (filtered.length === 0) {
+        list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">No items</div>';
+        return;
+    }
+    filtered.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'item' + (item[config.idField] === currentItemId ? ' active' : '');
+        div.innerHTML = `
+            <div class="item-name">${item[config.icon || ''] || ''} ${item[config.nameField] || item[config.idField]}</div>
+            <div class="item-meta">${config.meta(item)}</div>
+        `;
+        div.onclick = () => selectItem(item[config.idField]);
+        list.appendChild(div);
+    });
+}
+
+$('searchBox').oninput = renderList;
+
+function selectItem(id) {
+    currentItemId = id;
+    renderList();
+    renderEditor();
+}
+
+function renderEditor() {
+    const editor = $('editor');
+    const config = FILE_TYPES[currentFileType];
+    const item = currentData.find(i => i[config.idField] === currentItemId);
+    if (!item) {
+        editor.innerHTML = '<div class="editor-empty"><div class="icon">❓</div><h2>Item not found</h2></div>';
+        return;
+    }
+    
+    let html = `<h2 style="margin-top:0;">${item[config.nameField] || item[config.idField]}</h2>`;
+    
+    config.sections.forEach(section => {
+        html += `<div class="form-section"><h3>${section.title}</h3>`;
+        section.fields.forEach(field => {
+            html += `<div class="form-row">
+                <label>${field.label}</label>
+                <div>${renderField(field, item)}${field.help ? `<div class="help">${field.help}</div>` : ''}</div>
+            </div>`;
+        });
+        html += `</div>`;
+    });
+    
+    html += `<div class="editor-actions">
+        <button class="secondary" onclick="duplicateItem()">📋 Duplicate</button>
+        <button class="danger" onclick="deleteItem()">🗑 Delete</button>
+    </div>`;
+    
+    editor.innerHTML = html;
+    
+    // Bind change events
+    editor.querySelectorAll('[data-field]').forEach(el => {
+        el.oninput = el.onchange = (e) => handleFieldChange(el, e);
+    });
+    
+    // Bind tag inputs
+    editor.querySelectorAll('.tag-input').forEach(input => {
+        input.onkeydown = (e) => {
+            if ((e.key === 'Enter' || e.key === ',') && input.value.trim()) {
+                e.preventDefault();
+                addTag(input);
+            }
+        };
+        input.onblur = () => { if (input.value.trim()) addTag(input); };
+    });
+    
+    editor.querySelectorAll('.tag .x').forEach(x => {
+        x.onclick = (e) => {
+            e.stopPropagation();
+            removeTag(x);
+        };
+    });
+}
+
+function renderField(field, item) {
+    const value = getNestedValue(item, field.key);
+    const keyAttr = `data-field="${field.key}"`;
+    
+    if (field.type === 'textarea') {
+        return `<textarea ${keyAttr}>${escapeHtml(value || '')}</textarea>`;
+    }
+    if (field.type === 'select') {
+        const opts = field.options.map(o => `<option value="${o}" ${value === o ? 'selected' : ''}>${o}</option>`).join('');
+        return `<select ${keyAttr}><option value="">-- Select --</option>${opts}</select>`;
+    }
+    if (field.type === 'tags') {
+        const tags = Array.isArray(value) ? value : [];
+        const tagHtml = tags.map(t => `<span class="tag">${escapeHtml(t)}<span class="x">×</span></span>`).join('');
+        return `<div class="tag-list" data-field="${field.key}">${tagHtml}<input class="tag-input" placeholder="Type & press Enter..."></div>`;
+    }
+    if (field.type === 'variations') {
+        const vars = Array.isArray(value) ? value : [];
+        let vhtml = '<div class="variations-editor">';
+        vars.forEach((v, i) => {
+            vhtml += `<div class="variation-row">
+                <input type="text" placeholder="Name" value="${escapeHtml(v.name || '')}" data-variation="${i}" data-vfield="name">
+                <input type="number" placeholder="Chance %" value="${v.chance || 0}" step="0.1" data-variation="${i}" data-vfield="chance">
+                <label class="checkbox-row" style="padding:0;"><input type="checkbox" ${v.rare ? 'checked' : ''} data-variation="${i}" data-vfield="rare"> Rare</label>
+                <button class="danger" onclick="removeVariation(${i})">×</button>
+            </div>`;
+        });
+        vhtml += `<button class="secondary" onclick="addVariation()">+ Add Variation</button></div>`;
+        return `<div data-field="${field.key}">${vhtml}</div>`;
+    }
+    if (field.type === 'number') {
+        return `<input type="number" ${keyAttr} value="${value ?? ''}" step="any">`;
+    }
+    return `<input type="text" ${keyAttr} value="${escapeHtml(value ?? '')}">`;
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function getNestedValue(obj, path) {
+    return path.split('.').reduce((o, k) => o?.[k], obj);
+}
+
+function setNestedValue(obj, path, value) {
+    const parts = path.split('.');
+    const last = parts.pop();
+    const target = parts.reduce((o, k) => o[k] = o[k] || {}, obj);
+    target[last] = value;
+}
+
+function handleFieldChange(el, e) {
+    const field = el.dataset.field;
+    if (field === 'variations') {
+        // Handle variation sub-fields
+        const vIdx = el.dataset.variation;
+        const vField = el.dataset.vfield;
+        if (vIdx !== undefined && vField) {
+            const item = currentData.find(i => i[FILE_TYPES[currentFileType].idField] === currentItemId);
+            if (!item.variations) item.variations = [];
+            const idx = parseInt(vIdx);
+            if (!item.variations[idx]) item.variations[idx] = {};
+            if (vField === 'chance') item.variations[idx][vField] = parseFloat(el.value) || 0;
+            else if (vField === 'rare') item.variations[idx][vField] = el.checked;
+            else item.variations[idx][vField] = el.value;
+            return;
+        }
+    }
+    
+    const item = currentData.find(i => i[FILE_TYPES[currentFileType].idField] === currentItemId);
+    if (!item) return;
+    
+    let value = el.value;
+    if (el.type === 'number') value = value === '' ? null : parseFloat(value);
+    setNestedValue(item, field, value);
+    
+    // Update list item if it's the name/id
+    const config = FILE_TYPES[currentFileType];
+    if (field === config.nameField || field === config.idField) {
+        renderList();
+        const h2 = $('editor').querySelector('h2');
+        if (h2) h2.textContent = item[config.nameField] || item[config.idField];
+    }
+}
+
+function addTag(input) {
+    const field = input.parentElement.dataset.field;
+    const value = input.value.trim();
+    if (!value) return;
+    const item = currentData.find(i => i[FILE_TYPES[currentFileType].idField] === currentItemId);
+    if (!item[field]) item[field] = [];
+    if (!item[field].includes(value)) {
+        item[field].push(value);
+    }
+    input.value = '';
+    renderEditor();
+}
+
+function removeTag(x) {
+    const tag = x.parentElement;
+    const list = tag.parentElement;
+    const field = list.dataset.field;
+    const value = tag.textContent.replace('×', '').trim();
+    const item = currentData.find(i => i[FILE_TYPES[currentFileType].idField] === currentItemId);
+    if (item[field]) {
+        item[field] = item[field].filter(v => v !== value);
+    }
+    renderEditor();
+}
+
+window.addVariation = function() {
+    const item = currentData.find(i => i[FILE_TYPES[currentFileType].idField] === currentItemId);
+    if (!item.variations) item.variations = [];
+    item.variations.push({ name: 'New Variation', chance: 5, rare: false });
+    renderEditor();
+};
+
+window.removeVariation = function(idx) {
+    const item = currentData.find(i => i[FILE_TYPES[currentFileType].idField] === currentItemId);
+    if (item.variations) {
+        item.variations.splice(idx, 1);
+        renderEditor();
+    }
+};
+
+$('newItemBtn').onclick = () => {
+    if (!currentFileType) {
+        showToast('Select a file type tab first', 'error');
+        return;
+    }
+    if (!currentData) currentData = [];
+    const config = FILE_TYPES[currentFileType];
+    let newId = 'new_item_' + Date.now();
+    const newItem = { [config.idField]: newId, [config.nameField]: 'New Item' };
+    
+    // Add defaults based on type
+    if (currentFileType === 'animals') {
+        Object.assign(newItem, { diet: 'Herbivore', cost: 100, dailyIncome: 10, foodCost: 2, requiredExhibitSize: 'small', minInExhibit: 1, maxInExhibit: 5, compatibleWith: [], gestationDays: 10, breedChance: 0.1 });
+    } else if (currentFileType === 'research') {
+        Object.assign(newItem, { cost: 1000, days: 5, tier: 'basic', unlocks: [], icon: '🔬' });
+    } else if (currentFileType === 'staff') {
+        Object.assign(newItem, { cost: 500, salary: 50, role: 'Staff', icon: '👤', effects: {} });
+    } else if (currentFileType === 'amenities') {
+        Object.assign(newItem, { cost: 200, icon: '🏪', capacity: 10 });
+    } else if (currentFileType === 'achievements') {
+        Object.assign(newItem, { icon: '🏆', check: { type: 'totalAnimals', value: 10 } });
+    }
+    
+    currentData.push(newItem);
+    currentItemId = newId;
+    renderList();
+    renderEditor();
+    showToast('Created new item');
+};
+
+window.duplicateItem = function() {
+    const config = FILE_TYPES[currentFileType];
+    const item = currentData.find(i => i[config.idField] === currentItemId);
+    if (!item) return;
+    const copy = JSON.parse(JSON.stringify(item));
+    copy[config.idField] = item[config.idField] + '_copy_' + Date.now();
+    copy[config.nameField] = (item[config.nameField] || '') + ' (Copy)';
+    currentData.push(copy);
+    currentItemId = copy[config.idField];
+    renderList();
+    renderEditor();
+    showToast('Item duplicated');
+};
+
+window.deleteItem = function() {
+    const config = FILE_TYPES[currentFileType];
+    const item = currentData.find(i => i[config.idField] === currentItemId);
+    if (!item) return;
+    if (!confirm(`Delete "${item[config.nameField] || item[config.idField]}"?`)) return;
+    currentData = currentData.filter(i => i !== item);
+    currentItemId = null;
+    renderList();
+    $('editor').innerHTML = '<div class="editor-empty"><div class="icon">✅</div><h2>Item deleted</h2></div>';
+    showToast('Item deleted');
+};
+
+$('downloadBtn').onclick = () => {
+    if (!currentData || !currentFileType) {
+        showToast('No data to download', 'error');
+        return;
+    }
+    const json = JSON.stringify(currentData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (currentFileName || currentFileType) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Downloaded ' + a.download);
+};
+
+function showToast(msg, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (type === 'error' ? ' error' : '');
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Start with animals tab selected
+selectFileType('animals');
+</script>
+
+</body>
+</html>
