@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.10 </title>
+<title>ZooSmith V0.2.11 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -2173,7 +2173,7 @@ function advanceDay() {
                         ageDays: 0,
                         dailyIncome: animal.dailyIncome,
                         foodCost: animal.foodCost,
-                        diet: animalData.diet, 
+                        diet: animal.diet, 
                         variation: null,
                         compatibleWith: animal.compatibleWith,
                         minInExhibit: animal.minInExhibit,
@@ -3515,7 +3515,7 @@ document.getElementById("resetGameBtn").onclick = () => {
         visitorSatisfaction: 100,
         food: { hay: 30, meat: 20, produce: 15 },
        completedResearch: [],   // ← ADD THIS
-        activeResearch: null  
+        activeResearch: null,  
         maintenance: { dailyMaintenanceCost: 0 }
     };
 
