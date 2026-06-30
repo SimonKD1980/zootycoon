@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.17 </title>
+<title>ZooSmith V0.2.18 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -1202,6 +1202,7 @@ button:disabled {
         <span>📈 $<span id="income">0</span>/day</span>
         <span>🎟 $<span id="ticketPrice">20</span></span>
         <span>✨ Novelty: <span id="novelty">100%</span></span>
+ <span id="staffingStatus">🧑‍🌾 <span id="staffSlots">0/0</span></span>  <!-- NEW -->
     </div>
 </header>
 
@@ -1518,7 +1519,42 @@ function showFloatingMoney(amount) {
     
     setTimeout(() => el.remove(), 1500);
 }
+function getKeeperSlots() {
+    let total = 0;
+    for (const staffId of state.hiredStaff) {
+        const staff = data.staff.find(s => s.id === staffId);
+        if (staff && staff.keeperSlots) {
+            total += staff.keeperSlots;
+        }
+    }
+    return total;
+}
 
+function getAnimalSlotCost(animal) {
+    // Use the animal's requiredExhibitSize as proxy for keeper load
+    const size = animal.requiredExhibitSize || "small";
+    if (size === "large") return 3;
+    if (size === "medium") return 2;
+    return 1;
+}
+
+function getUsedSlots() {
+    let used = 0;
+    for (const id in state.exhibits) {
+        for (const animal of state.exhibits[id].animals) {
+            used += getAnimalSlotCost(animal);
+        }
+    }
+    return used;
+}
+
+function getAvailableSlots() {
+    return getKeeperSlots() - getUsedSlots();
+}
+
+function isUnderstaffed() {
+    return getUsedSlots() > getKeeperSlots();
+}
 function getStaffEffects() {
     const effects = {
         visitorHappiness: 0,
@@ -2096,6 +2132,11 @@ function tryBreeding(exhibit) {
     if (animal.wasHungry) {
         happiness -= 30;
     }
+
+    // ✅ NEW: Understaffed penalty
+if (isUnderstaffed()) {
+    happiness -= 20;
+}
     
     total += happiness;
       
@@ -2284,6 +2325,30 @@ function updateUI() {
         const noveltyMultiplier = 1 - (decayFactor * 0.9);
         document.getElementById("novelty").textContent = Math.round(noveltyMultiplier * 100) + "%";
     }
+// Update staffing display
+const usedSlots = getUsedSlots();
+const totalSlots = getKeeperSlots();
+const staffingEl = document.getElementById("staffSlots");
+const statusEl = document.getElementById("staffingStatus");
+
+if (staffingEl && statusEl) {
+    staffingEl.textContent = `${usedSlots}/${totalSlots}`;
+    
+    if (totalSlots === 0 && usedSlots > 0) {
+        statusEl.style.color = "var(--danger)";
+        statusEl.title = "No keepers hired! Animals are unhappy!";
+    } else if (usedSlots > totalSlots) {
+        statusEl.style.color = "var(--danger)";
+        statusEl.title = "Understaffed! Hire more keepers!";
+    } else if (usedSlots > totalSlots * 0.8) {
+        statusEl.style.color = "var(--warn)";
+        statusEl.title = "Getting close to capacity";
+    } else {
+        statusEl.style.color = "var(--accent)";
+        statusEl.title = "Staffing is good";
+    }
+}
+  
 } 
 
 function showSection(section, event) {
@@ -2363,6 +2428,10 @@ function filterByCategory(category) {
 
 function renderShopGrid() {
     const grid = document.getElementById('shopGrid');
+
+  const slotCost = getAnimalSlotCost(animal);
+const slotColor = slotCost >= 3 ? 'danger' : slotCost >= 2 ? 'warn' : 'blue';
+  
     if (!grid) return;
     
     let filtered = data.animals.filter(a => !a.unlock || state.achievements[a.unlock]);
@@ -2410,6 +2479,7 @@ function renderShopGrid() {
                     <span class="stat-badge">${dietEmoji} ${animal.diet}</span>
                     <span class="stat-badge">🌍 ${animal.habitat}</span>
                     <span class="stat-badge">${statusEmoji} ${animal.conservationStatus}</span>
+                    <span class="stat-badge ${slotColor}">🧑‍🌾 ${slotCost} slot${slotCost > 1 ? 's' : ''}</span>
                 </div>
                 
                 <p class="card-desc">${animal.info}</p>
@@ -2904,12 +2974,37 @@ function renderStaff() {
         return sum + (staff?.salary || 0);
     }, 0);
     
-    summary.innerHTML = `
-        <div class="card-header">
-            <h3>👷 Staff Overview</h3>
-            <div class="subtitle">${state.hiredStaff.length} staff members hired • $${totalSalary}/day in salaries</div>
+const totalSlots = getKeeperSlots();
+const usedSlots = getUsedSlots();
+const availableSlots = totalSlots - usedSlots;
+
+summary.innerHTML = `
+    <div class="card-header">
+        <h3>👷 Staff Overview</h3>
+        <div class="subtitle">${state.hiredStaff.length} staff members hired • $${totalSalary}/day in salaries</div>
+    </div>
+    <div class="card-body" style="padding: 12px 16px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+            <div style="padding: 10px; background: #0b1220; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Keeper Slots</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">${totalSlots}</div>
+            </div>
+            <div style="padding: 10px; background: #0b1220; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Used</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: ${usedSlots > totalSlots ? 'var(--danger)' : 'var(--blue)'};">${usedSlots}</div>
+            </div>
+            <div style="padding: 10px; background: #0b1220; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Available</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: ${availableSlots < 0 ? 'var(--danger)' : 'var(--accent)'};">${availableSlots}</div>
+            </div>
         </div>
-    `;
+        ${isUnderstaffed() ? `
+            <div style="margin-top: 10px; padding: 10px; background: rgba(239, 68, 68, 0.15); border-radius: 8px; text-align: center; color: var(--danger); font-weight: 700;">
+                ⚠️ UNDERSTAFFED - Animals are unhappy and you can't buy new ones!
+            </div>
+        ` : ''}
+    </div>
+`;
     grid.appendChild(summary);
 
     data.staff.forEach(staff => {
@@ -3027,6 +3122,13 @@ document.getElementById("confirmBuyBtn").onclick = () => {
     const incompatible = exhibit.animals.some(existing => existing.id !== animal.id && !animal.compatibleWith.includes(existing.id));
     if (incompatible) return showToast("This animal cannot live with current exhibit animals!", "error");
 
+    // ✅ NEW: Check keeper slots
+    const slotCost = getAnimalSlotCost(animal);
+    const available = getAvailableSlots();
+    if (available < slotCost) {
+        return showToast(`Need ${slotCost} keeper slot${slotCost > 1 ? 's' : ''}! Only ${available} available. Hire more keepers!`, "error");
+    }
+  
     state.money -= animal.cost;
     showFloatingMoney(-animal.cost);
     
