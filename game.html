@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.16 </title>
+<title>ZooSmith V0.2.17 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -3060,7 +3060,8 @@ document.getElementById("confirmBuyBtn").onclick = () => {
 
 function openAnimalInfo(animal, exhibitId, index) {
     const content = document.getElementById("animalInfoContent");
-   let pregnancyInfo = "";
+
+    let pregnancyInfo = "";
     if (animal.isPregnant) {
         pregnancyInfo = `
             <div style="margin-top: 15px; padding: 12px; background: rgba(168, 85, 247, 0.1); border: 1px solid var(--purple); border-radius: 8px;">
@@ -3073,7 +3074,7 @@ function openAnimalInfo(animal, exhibitId, index) {
             </div>
         `;
     }
-    
+
     content.innerHTML = `
         <h2>${animal.name}</h2>
         <p>💰 Income: $${animal.dailyIncome}/day</p>
@@ -3088,20 +3089,10 @@ function openAnimalInfo(animal, exhibitId, index) {
             <button id="moveFromInfoBtn" class="moveBtn">🔄 Move Animal</button>
         </div>
     `;
-  
-        <h2>${animal.name}</h2>
-        <p>💰 Income: $${animal.dailyIncome}/day</p>
-        <p>👥 Needs: ${animal.minInExhibit} - ${animal.maxInExhibit}</p>
-        <p>🏞 Exhibit: ${state.exhibits[exhibitId]?.name ?? "Unknown"}</p>
-        ${animal.variation ? `<p>✨ Variant: ${animal.variation.name}</p>` : ""}
-        <p>🍼 Born in zoo: ${animal.bornInZoo ? "Yes" : "No"}</p>
-        <div style="margin-top: 15px; display: flex; gap: 10px;">
-            <button id="sellAnimalBtn" class="buildBtn">💸 Sell Animal</button>
-            <button id="moveFromInfoBtn" class="moveBtn">🔄 Move Animal</button>
-        </div>
-    `;
 
-    document.getElementById("sellAnimalBtn").onclick = () => sellAnimal(animal, exhibitId);
+    document.getElementById("sellAnimalBtn").onclick = () =>
+        sellAnimal(animal, exhibitId);
+
     document.getElementById("moveFromInfoBtn").onclick = () => {
         closeAnimalInfo();
         setTimeout(() => {
@@ -3115,7 +3106,6 @@ function openAnimalInfo(animal, exhibitId, index) {
 
     document.getElementById("animalInfoModal").classList.add("active");
 }
-
 function closeAnimalInfo() {
     document.getElementById("animalInfoModal").classList.remove("active");
 }
