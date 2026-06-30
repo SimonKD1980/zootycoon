@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.11 </title>
+<title>ZooSmith V0.2.12 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -1626,13 +1626,19 @@ function generateVisitors() {
     const attraction = calculateAttraction();
     if (attraction <= 0) return 0;
     
-    let visitors = Math.floor(10 * Math.sqrt(attraction));
-    const decayFactor = Math.min(1, state.daysSinceNewAnimal / 10);
-    const noveltyMultiplier = 1 - (decayFactor * 0.9); 
+    // Base visitors + animal bonus (gentler scaling)
+    const baseVisitors = 5;
+    const animalBonus = Math.floor(2 * Math.sqrt(attraction));
+    let visitors = baseVisitors + animalBonus;
+    
+    // Gentler novelty decay: 40% over 20 days
+    const decayFactor = Math.min(1, state.daysSinceNewAnimal / 20);
+    const noveltyMultiplier = 1 - (decayFactor * 0.4); 
     visitors = Math.floor(visitors * noveltyMultiplier);
-    return visitors;
+    
+    // Minimum 3 visitors if you have any animals
+    return Math.max(3, visitors);
 }
-
 function processVisitorBehavior(visitors) {
     state.visitorComplaints = [];
     state.visitorSpending = { food: 0, gifts: 0, total: 0 };
@@ -3352,6 +3358,7 @@ const RANDOM_EVENTS = [
 let currentEvent = null;
 
 function triggerRandomEvent() {
+  return; 
     // 30% chance of an event each day
     if (Math.random() > 0.30) return;
 
