@@ -7,7 +7,7 @@
     "cost": 2000,
     "days": 5,
     "tier": "basic",
-    "unlocks": ["deer", "goat", "sheep", "alpaca"],
+    "unlocks": ["fallow_deer", "babydoll_southdowns_sheep", "alpaca"],
     "requires": null
   },
   {
