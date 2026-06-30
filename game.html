@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.8 </title>
+<title>ZooSmith V0.2.9 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -3879,7 +3879,7 @@ function renderResearch() {
     }
     
     // Completed research summary
-    const completedCount = state.completedResearch.length;
+    const completedCount = (state.completedResearch || []).length;
     const totalCount = Object.keys(data.researchProjects).length;
     const unlockedAnimals = animals.filter(a => !a.researchRequired || isResearchComplete(a.researchRequired)).length;
     const totalAnimals = animals.length;
@@ -3990,7 +3990,7 @@ function renderResearch() {
                     </div>
                     <div style="padding: 10px; background: #0b1220; border-radius: 8px; text-align: center;">
                         <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Total Invested</div>
-                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--warn);">$${state.completedResearch.reduce((sum, id) => sum + (data.researchProjects[id]?.cost || 0), 0).toLocaleString()}</div>
+                        <div style="font-size: 1.5rem; font-weight: 800; color: var(--warn);">$${(state.completedResearch || []).reduce((sum, id) => sum + (data.researchProjects[id]?.cost || 0), 0).toLocaleString()}</div>
                     </div>
                 </div>
             </div>
