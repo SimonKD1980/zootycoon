@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.14 </title>
+<title>ZooSmith V0.2.15 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -2277,17 +2277,15 @@ function updateUI() {
     document.getElementById("month").textContent = state.month;
     document.getElementById("year").textContent = state.year;
     document.getElementById("ticketPrice").textContent = state.ticketPrice;
-    
     const allAnimals = getAllAnimals();
-if (allAnimals.length === 0) {
-    document.getElementById("novelty").textContent = "0%";
-} else {
-    const decayFactor = Math.min(1, state.daysSinceNewAnimal / 10);
-    const noveltyMultiplier = 1 - (decayFactor * 0.9);
-    document.getElementById("novelty").textContent = Math.round(noveltyMultiplier * 100) + "%";
-}
-}
-
+    if (allAnimals.length === 0) {
+        document.getElementById("novelty").textContent = "0%";
+    } else {
+        const decayFactor = Math.min(1, state.daysSinceNewAnimal / 10);
+        const noveltyMultiplier = 1 - (decayFactor * 0.9);
+        document.getElementById("novelty").textContent = Math.round(noveltyMultiplier * 100) + "%";
+    }
+} 
 
 function showSection(section, event) {
     document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
@@ -3092,9 +3090,6 @@ function openAnimalInfo(animal, exhibitId, index) {
         </div>
     `;
   
-  
-  
-  content.innerHTML = `
         <h2>${animal.name}</h2>
         <p>💰 Income: $${animal.dailyIncome}/day</p>
         <p>👥 Needs: ${animal.minInExhibit} - ${animal.maxInExhibit}</p>
