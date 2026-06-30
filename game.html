@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.13 </title>
+<title>ZooSmith V0.2.14 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -1583,6 +1583,33 @@ function canStartResearch(projectId) {
     return true;
 }
 
+function startResearch(projectId) {
+    const project = data.researchProjects[projectId];
+    if (!project) return;
+    
+    if (!canStartResearch(projectId)) {
+        if (state.activeResearch) return showToast("Lab is busy with another project!", "warn");
+        if (state.money < project.cost) return showToast(`Need $${project.cost.toLocaleString()}!`, "error");
+        if (project.requires && !isResearchComplete(project.requires)) return showToast("Prerequisite research not complete!", "error");
+        return;
+    }
+    
+    state.money -= project.cost;
+    showFloatingMoney(-project.cost);
+    
+    state.activeResearch = {
+        projectId: project.id,
+        daysRemaining: project.days
+    };
+    
+    addTicker(`🔬 Started research: ${project.name}`);
+    showToast(`Research begun: ${project.name} (${project.days} days)`, "info");
+    
+    updateUI();
+    renderResearch();
+    saveGame();
+}
+
 // NEW: Generic achievement check evaluator
 function evaluateCheck(check, stats) {
     if (!check) return false;
@@ -2072,7 +2099,7 @@ function tryBreeding(exhibit) {
     }
     
     total += happiness;
-        total += happiness;
+      
     });
 
     let avgHappiness = Math.round(total / exhibit.animals.length);
@@ -2258,6 +2285,7 @@ if (allAnimals.length === 0) {
     const decayFactor = Math.min(1, state.daysSinceNewAnimal / 10);
     const noveltyMultiplier = 1 - (decayFactor * 0.9);
     document.getElementById("novelty").textContent = Math.round(noveltyMultiplier * 100) + "%";
+}
 }
 
 
