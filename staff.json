@@ -7,6 +7,7 @@
         "cost": 2000,
         "salary": 50,
         "description": "Experienced animal handler.",
+        "keeperSlots": 5,
         "effects": {
             "animalHappiness": 5,
             "cleanExhibits": 10,
