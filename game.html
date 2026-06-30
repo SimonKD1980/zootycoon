@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.20 </title>
+<title>ZooSmith V0.2.21 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script type="module">
@@ -2285,7 +2285,20 @@ function advanceDay() {
             }
         }
     }
-  
+// ✅ Process active research
+if (state.activeResearch) {
+    state.activeResearch.daysRemaining--;
+    if (state.activeResearch.daysRemaining <= 0) {
+        const project = data.researchProjects[state.activeResearch.projectId];
+        state.completedResearch.push(state.activeResearch.projectId);
+        state.activeResearch = null;
+        if (project) {
+            addTicker(`🎉 Research complete: ${project.name}!`);
+            showToast(`🔬 ${project.name} complete! ${project.unlocks.length} new animals unlocked!`, "info");
+        }
+        renderShop();  // Unlock new animals in shop
+    }
+}
     state.day++;
     if (state.day > 30) {
         state.day = 1;
