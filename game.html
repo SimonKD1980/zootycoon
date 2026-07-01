@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.24 </title>
+<title>ZooSmith V0.2.25 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
  
 <script type="module">
@@ -1870,15 +1870,14 @@ if (available >= needed) {
 state.food[foodType] -= needed;
 } else {
 // Not enough food - animals go hungry
-const shortage = needed - available;
 state.food[foodType] = 0;
-// Find hungry animals and reduce happiness
+// ✅ RESTORED: Find hungry animals and mark them
 let hungryCount = 0;
 for (const id in state.exhibits) {
 for (const animal of state.exhibits[id].animals) {
 if (getDietFoodType(animal.diet) === foodType) {
 hungryCount++;
-animal.wasHungry = true;
+animal.wasHungry = true;  // ← This was missing!
 }
 }
 }
