@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.22 </title>
+<title>ZooSmith V0.2.23 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
  
 <script type="module">
@@ -1852,55 +1852,48 @@ function processUpkeep() {
 }
 
 function consumeDailyFood() {
-    const consumption = { hay: 0, meat: 0, produce: 0 };
-    const hungryAnimals = [];
-    
-    // Calculate what we need
-    for (const id in state.exhibits) {
-        for (const animal of state.exhibits[id].animals) {
-            const foodType = getDietFoodType(animal.diet);
-            const units = animal.isPregnant ? 2 : 1;
-            consumption[foodType] += units;
-        }
-    }
-    
-    // Try to feed everyone
-    for (const foodType in consumption) {
-        const needed = consumption[foodType];
-        const available = state.food[foodType] || 0;
-        
-        if (available >= needed) {
-            state.food[foodType] -= needed;
-        } else {
-            // Not enough food - animals go hungry
-            const shortage = needed - available;
-            state.food[foodType] = 0;
-            
-            // Find hungry animals and reduce happiness
-            let hungryCount = 0;
-            
-            if (hungryCount > 0) {
-                hungryAnimals.push(`${FOOD_TYPES[foodType].icon} ${hungryCount} animals hungry!`);
-            }
-        }
-    }
-    
-    // Apply happiness penalty for hungry animals
-    for (const id in state.exhibits) {
-        for (const animal of state.exhibits[id].animals) {
-          
-            }
-        }
-    }
-    
-    if (hungryAnimals.length > 0) {
-        addTicker(`⚠️ ${hungryAnimals.join(', ')}`);
-        showToast("Animals are hungry! Buy more food!", "error");
-    }
-    
-    return consumption;
+const consumption = { hay: 0, meat: 0, produce: 0 };
+const hungryAnimals = [];
+// Calculate what we need
+for (const id in state.exhibits) {
+for (const animal of state.exhibits[id].animals) {
+const foodType = getDietFoodType(animal.diet);
+const units = animal.isPregnant ? 2 : 1;
+consumption[foodType] += units;
 }
-
+}
+// Try to feed everyone
+for (const foodType in consumption) {
+const needed = consumption[foodType];
+const available = state.food[foodType] || 0;
+if (available >= needed) {
+state.food[foodType] -= needed;
+} else {
+// Not enough food - animals go hungry
+const shortage = needed - available;
+state.food[foodType] = 0;
+// Find hungry animals and reduce happiness
+let hungryCount = 0;
+for (const id in state.exhibits) {
+for (const animal of state.exhibits[id].animals) {
+if (getDietFoodType(animal.diet) === foodType) {
+hungryCount++;
+animal.wasHungry = true;
+}
+}
+}
+if (hungryCount > 0) {
+hungryAnimals.push(`${FOOD_TYPES[foodType].icon} ${hungryCount} animals hungry!`);
+}
+}
+}
+if (hungryAnimals.length > 0) {
+addTicker(`⚠️ ${hungryAnimals.join(', ')}`);
+showToast("Animals are hungry! Buy more food!", "error");
+}
+return consumption;
+}
+ 
 function renderSupplies() {
     const box = document.getElementById("supplies");
     const consumption = { hay: 0, meat: 0, produce: 0 };
