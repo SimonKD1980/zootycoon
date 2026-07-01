@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.21 </title>
+<title>ZooSmith V0.2.22 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
  
 <script type="module">
@@ -1878,15 +1878,6 @@ function consumeDailyFood() {
             
             // Find hungry animals and reduce happiness
             let hungryCount = 0;
-            for (const id in state.exhibits) {
-                for (const animal of state.exhibits[id].animals) {
-                    if (getDietFoodType(animal.diet) === foodType) {
-                        hungryCount++;
-                        // Will apply happiness penalty via a flag
-                        animal.wasHungry = true;
-                    }
-                }
-            }
             
             if (hungryCount > 0) {
                 hungryAnimals.push(`${FOOD_TYPES[foodType].icon} ${hungryCount} animals hungry!`);
@@ -1897,9 +1888,7 @@ function consumeDailyFood() {
     // Apply happiness penalty for hungry animals
     for (const id in state.exhibits) {
         for (const animal of state.exhibits[id].animals) {
-            if (animal.wasHungry) {
-                // Penalty handled in getExhibitHappiness (we'll add this)
-                delete animal.wasHungry;
+          
             }
         }
     }
@@ -2129,9 +2118,10 @@ function tryBreeding(exhibit) {
           toArray(animal.dislikedShelter).forEach(pref => { if (upgrades.includes(pref)) happiness -= 15; });
           toArray(animal.dislikedDecorations).forEach(pref => { if (upgrades.includes(pref)) happiness -= 10; });
           toArray(animal.dislikedFacilities).forEach(pref => { if (upgrades.includes(pref)) happiness -= 10; });
-    if (animal.wasHungry) {
-        happiness -= 30;
-    }
+if (animal.wasHungry) {
+    happiness -= 30;
+    delete animal.wasHungry;  // ← Clear after applying penalty
+}
 
     // ✅ NEW: Understaffed penalty
 if (isUnderstaffed()) {
@@ -2442,6 +2432,10 @@ function filterByCategory(category) {
 function renderShopGrid() {
     const grid = document.getElementById('shopGrid');
     if (!grid) return;
+
+     // ✅ Remove any existing locked section first
+    const existingLocked = grid.parentElement.querySelector('[data-locked-section]');
+    if (existingLocked) existingLocked.remove();
     
     // Split animals into unlocked and locked
     const unlocked = [];
@@ -2535,6 +2529,7 @@ function renderShopGrid() {
             </div>
             <div class="grid-layout" id="lockedGrid"></div>
         `;
+        lockedSection.dataset.lockedSection = "true"; 
         grid.parentElement.appendChild(lockedSection);
         
         const lockedGrid = lockedSection.querySelector('#lockedGrid');
@@ -3741,13 +3736,13 @@ document.getElementById("resetGameBtn").onclick = () => {
         amenities: {},
         visitorSatisfaction: 0,
         food: { hay: 30, meat: 20, produce: 15 },
-       completedResearch: [],   // ← ADD THIS
+        completedResearch: [],   // ← ADD THIS
         activeResearch: null,  
         maintenance: { dailyMaintenanceCost: 0 }
     };
 
     ["reports", "exhibits", "shop", "achievements", "staff", "facilities", "visitors", "amenities"].forEach(id => document.getElementById(id).innerHTML = "");
-    updateUI(); renderExhibits(); renderAchievements(); renderReports(); renderShop(); renderFacilities(); renderStaff(); renderSupplies();
+    updateUI(); renderExhibits(); renderAchievements(); renderReports(); renderShop(); renderFacilities(); renderStaff(); renderSupplies(); renderResearch();
     showToast("Zoo has been reset!", "info");
 };
 
