@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZooSmith V0.2.23 </title>
+<title>ZooSmith V0.2.24 </title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
  
 <script type="module">
@@ -2111,7 +2111,8 @@ function tryBreeding(exhibit) {
           toArray(animal.dislikedShelter).forEach(pref => { if (upgrades.includes(pref)) happiness -= 15; });
           toArray(animal.dislikedDecorations).forEach(pref => { if (upgrades.includes(pref)) happiness -= 10; });
           toArray(animal.dislikedFacilities).forEach(pref => { if (upgrades.includes(pref)) happiness -= 10; });
-if (animal.wasHungry) {
+
+     if (animal.wasHungry) {
     happiness -= 30;
     delete animal.wasHungry;  // ← Clear after applying penalty
 }
@@ -2220,7 +2221,8 @@ function advanceDay() {
     processUpkeep();
     processDailyMaintenance();  
     consumeDailyFood(); 
-    
+    renderExhibits();
+ 
     const delta = state.money - startMoney;
     if (delta !== 0) showFloatingMoney(delta);
 
